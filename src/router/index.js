@@ -1,14 +1,34 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
+import Welcome from '../views/Welcome.vue'
+import RedisStatus from '../views/RedisStatus.vue'
+import KeyValues from '../views/KeyValues.vue'
 
 Vue.use(VueRouter)
 
 const routes = [
   {
     path: '/',
+    name: 'Welcome',
+    component: Welcome
+  },
+  {
+    path: '/Home',
     name: 'Home',
-    component: Home
+    component: Home,
+    children: [
+      {
+        path: '/RedisStatus',
+        name: 'RedisStatus',
+        component: RedisStatus
+      },
+      {
+        path: '/KeyValues',
+        name: 'KeyValues',
+        component: KeyValues
+      }
+    ]
   },
   {
     path: '/about',
