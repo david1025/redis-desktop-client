@@ -6,13 +6,15 @@ import {
   /* installVueDevtools */
 } from 'vue-cli-plugin-electron-builder/lib'
 const isDevelopment = process.env.NODE_ENV !== 'production'
-
-let win
+const winURL = process.env.NODE_ENV === 'development'
+  ? 'http://localhost:8080'
+  : `file://${__dirname}/index.html`
+let welcomeWin
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { secure: true, standard: true } }])
 
-function createWindow () {
-  win = new BrowserWindow({
+function createWelcomeWindow () {
+  welcomeWin = new BrowserWindow({
     width: 640,
     height: 400,
     show: false,
@@ -23,15 +25,15 @@ function createWindow () {
   })
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
-    win.loadURL(process.env.WEBPACK_DEV_SERVER_URL)
-    if (!process.env.IS_TEST) win.webContents.openDevTools()
+    welcomeWin.loadURL(process.env.WEBPACK_DEV_SERVER_URL)
+    if (!process.env.IS_TEST) welcomeWin.webContents.openDevTools()
   } else {
     createProtocol('app')
-    win.loadURL('app://./index.html')
+    welcomeWin.loadURL(winURL)
   }
 
-  win.on('closed', () => {
-    win = null
+  welcomeWin.on('closed', () => {
+    welcomeWin = null
   })
 }
 
@@ -45,15 +47,15 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  if (win === null) {
-    createWindow()
+  if (welcomeWin === null) {
+    createWelcomeWindow()
   }
 })
 
 app.on('ready', async () => {
   if (isDevelopment && !process.env.IS_TEST) {
   }
-  createWindow()
+  createWelcomeWindow()
 })
 
 app.setAppUserModelId('RedisDesktopClient')
@@ -72,22 +74,40 @@ if (isDevelopment) {
   }
 }
 
+let mainWin
+
+function createMainWindow () {
+  mainWin = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    show: false,
+    frame: process.platform === 'darwin',
+    webPreferences: {
+      nodeIntegration: true
+    }
+  })
+  if (!process.env.IS_TEST) mainWin.webContents.openDevTools()
+  mainWin.loadURL(winURL + '#/Home')
+  mainWin.on('closed', () => {
+    mainWin = null
+  })
+}
+
 ipcMain.on('show', e =>
-  win.show()
+  welcomeWin.show()
 )
-
-ipcMain.on('center', e =>
-  win.center()
-)
-
 ipcMain.on('close', e =>
-  win.hide()
+  welcomeWin === null ? '' : welcomeWin.close()
+)
+
+ipcMain.on('openMainWin', e =>
+  createMainWindow()
+)
+
+ipcMain.on('showMainWin', e =>
+  mainWin.show()
 )
 
 ipcMain.on('minimize', e =>
-  win.minimize()
-)
-
-ipcMain.on('changWindowSize', e =>
-  win.setSize(1000, 800)
+  mainWin.minimize()
 )

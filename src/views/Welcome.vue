@@ -8,13 +8,13 @@ const { ipcRenderer } = require('electron')
 export default {
   name: 'Home',
   mounted () {
-    this.jumpHome()
     ipcRenderer.send('show')
+    this.jumpHome()
   },
   methods: {
     jumpHome () {
       setTimeout(() => {
-        this.$router.push({ path: '/Home' })
+        ipcRenderer.send('openMainWin')
       }, 3000)
     }
   }
