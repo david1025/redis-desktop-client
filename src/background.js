@@ -26,7 +26,7 @@ function createWelcomeWindow () {
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     welcomeWin.loadURL(process.env.WEBPACK_DEV_SERVER_URL)
-    if (!process.env.IS_TEST) welcomeWin.webContents.openDevTools()
+    // if (!process.env.IS_TEST) welcomeWin.webContents.openDevTools()
   } else {
     createProtocol('app')
     welcomeWin.loadURL(winURL)
@@ -47,7 +47,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  if (welcomeWin === null) {
+  if (welcomeWin === null && mainWin === null) {
     createWelcomeWindow()
   }
 })
@@ -81,9 +81,12 @@ function createMainWindow () {
     width: 1200,
     height: 800,
     show: false,
-    frame: process.platform === 'darwin',
+    frame: false,
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 16, y: 30 },
     webPreferences: {
-      nodeIntegration: true
+      nodeIntegration: true,
+      experimentalFeatures: true
     }
   })
   if (!process.env.IS_TEST) mainWin.webContents.openDevTools()
