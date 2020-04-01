@@ -1,6 +1,5 @@
 <template>
   <div class="main">
-
     <div class="item close" @click="close">
       <i class="el-icon-close" style="font-size: 15px;font-weight: 500"></i>
     </div>
@@ -12,6 +11,9 @@
     </div>
     <div class="item" @click="minimize">
       <i class="el-icon-minus" style="font-size: 14px;font-weight: 500"></i>
+    </div>
+    <div class="item" @click="minimize">
+      <i class="el-icon-setting setting" style="font-size: 14px;font-weight: 500"></i>
     </div>
     <div style="margin-right: auto;margin-left: 6px;display: flex;align-items: center;">
       <img src="../assets/icon_logo.png"/>

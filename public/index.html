@@ -11,6 +11,22 @@
     <noscript>
       <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
+    <script type="text/javascript">
+      function globalChangeTheme(theme) {
+        theme  && (localStorage.theme = theme);
+        !theme && (theme = localStorage.theme);
+
+        const themeName =  (theme  == 'dark' ? 'dark' : 'chalk');
+        const themeHref = 'static/theme/' + themeName + '/index.css';
+
+        document.getElementById('theme-link').href = themeHref;
+        themeName == 'dark' ? document.body.classList.add('dark-mode') :
+                document.body.classList.remove('dark-mode');
+      }
+
+      // theme init
+      globalChangeTheme();
+    </script>
     <div id="app"></div>
     <!-- built files will be auto injected -->
   </body>

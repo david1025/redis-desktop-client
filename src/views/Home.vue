@@ -4,7 +4,7 @@
       <tool-bar/>
     </div>
     <div v-if="platform === 'darwin'" class="mac-bar">
-      <i class="el-icon-setting setting"></i>
+      <i class="el-icon-setting setting" @click="settingsDialogFormVisible = true"></i>
     </div>
     <div class="horizontal-line"></div>
     <div class="container">
@@ -20,7 +20,7 @@
               <div style="margin-left: auto;" >
                 <i v-if="item.connected" style="margin-left: 6px;" class="el-icon-refresh-right" @click.stop="refreshConnection(index)"></i>
                 <i v-if="item.connected" style="margin-left: 6px;" class="el-icon-edit-outline" @click.stop="editConnection(index)"></i>
-                <i v-if="item.connected" style="margin-left: 6px;" class="el-icon-delete" @click.stop="deleteConnection(index)"></i>
+                <i style="margin-left: 6px;" class="el-icon-delete" @click.stop="deleteConnection(index)"></i>
                 <i v-if="!item.collapse" style="margin-left: 6px;margin-right: 10px;" class="el-icon-arrow-right"></i>
                 <i v-if="item.collapse" style="margin-left: 6px;margin-right: 10px;" class="el-icon-arrow-down"></i>
               </div>
@@ -28,9 +28,11 @@
             <div v-if="item.collapse">
               <div v-for="(database,databaseIndex) in item.databases" :key="database.id"
                    class="database-item"
+                   :class="currentDatabase === databaseIndex ? 'checked' : ''"
                    @click="showKeyList(index, databaseIndex)">
                 <img src="../assets/icon_database.png">
-                <p>db{{database.id}} ({{database.size}})</p>
+                <p>DB-{{database.id}}</p>
+                <span>{{database.size}}</span>
               </div>
             </div>
           </div>
@@ -282,9 +284,9 @@
     </div>
     <el-dialog title="新建连接" :visible.sync="connectionDialogFormVisible">
       <el-form :model="connectionForm">
-        <el-form-item label="连接名称 :">
-          <el-input size="small" v-model="connectionForm.name" autocomplete="off"></el-input>
-        </el-form-item>
+<!--        <el-form-item label="连接名称 :">-->
+<!--          <el-input size="small" v-model="connectionForm.name" autocomplete="off"></el-input>-->
+<!--        </el-form-item>-->
         <el-form-item label="IP :">
           <el-input size="small" v-model="connectionForm.ip" autocomplete="off"></el-input>
         </el-form-item>
@@ -296,8 +298,34 @@
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="connectionDialogFormVisible = false">取 消</el-button>
-        <el-button type="primary" @click="saveConnection">确 定</el-button>
+        <el-button size="small" @click="testConnection" style="float: left">测试连接</el-button>
+        <el-button size="small" @click="connectionDialogFormVisible = false">取 消</el-button>
+        <el-button type="primary" size="small" @click="saveConnection">确 定</el-button>
+      </div>
+    </el-dialog>
+    <el-dialog title="设置" :visible.sync="settingsDialogFormVisible">
+      <div class="settings">
+        <p style="margin-left: 5px;font-weight: 500;">风格设置</p>
+        <div class="mode" style="display: flex;text-align: center;">
+          <div style="padding: 5px;cursor: pointer;" :class="displayMode === 'normal' ? 'checked' : 'normal'" @click="displayMode = 'normal'">
+            <img src="https://gw.alipayobjects.com/zos/antfincdn/NQ%24zoisaD2/jpRkZQMyYRryryPNtyIC.svg" alt="light">
+            <p style="margin: 0;">常规</p>
+          </div>
+          <div style="margin-left: 30px;padding: 5px;cursor: pointer;" :class="displayMode === 'dart' ? 'checked' : 'normal'" @click="displayMode = 'dart'">
+            <img src="https://gw.alipayobjects.com/zos/antfincdn/hmKaLQvmY2/LCkqqYNmvBEbokSDscrm.svg" alt="realDark">
+            <p style="margin: 0;">深色</p>
+          </div>
+        </div>
+        <p style="margin-left: 5px;font-weight: 500;margin-top: 20px;">关于</p>
+        <div style="margin-left: 5px;">
+          <span>当前版本：  </span><span style="color: rgba(0,0,0,.65);">V1.0.1</span> <el-button size="mini" style="margin-left: 20px;" @click="checkUpdate">检查更新</el-button>
+        </div>
+        <div style="margin-left: 5px;margin-top: 10px;">
+          <span>Github：  </span><a href="#" @click="openUrlWithOsBrowser('https://github.com/david1025')">https://github.com/david1025</a>
+        </div>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" size="small" @click="settingsDialogFormVisible = false">确 定</el-button>
       </div>
     </el-dialog>
     <el-dialog title="新建Key-Value" :visible.sync="newKeyDialogFormVisible">
@@ -315,7 +343,7 @@
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="newKeyForm.keyType === 'string'" label="类型">
+        <el-form-item v-if="newKeyForm.keyType === 'string'" label="Value">
           <el-input size="small"  v-model="newKeyForm.value" autocomplete="off"></el-input>
         </el-form-item>
       </el-form>
@@ -331,6 +359,7 @@
 import ToolBar from '../components/ToolBar'
 const { ipcRenderer } = require('electron')
 const Redis = require('ioredis')
+const { shell } = require('electron')
 export default {
   name: 'Home',
   components: { ToolBar },
@@ -395,21 +424,23 @@ export default {
         key: '',
         keyType: '',
         value: ''
-      }
+      },
+      settingsDialogFormVisible: false,
+      displayMode: 'normal'
     }
   },
   mounted () {
     ipcRenderer.send('close')
     this.platform = process.platform
     ipcRenderer.send('showMainWin')
-    this.connections = JSON.parse(window.localStorage.getItem('connections'))
+    this.connections = JSON.parse(window.localStorage.getItem('connections')) === null ? [] : JSON.parse(window.localStorage.getItem('connections'))
   },
   methods: {
     redisStatus (index) {
-      this.redisInfoVisible = true
       const _this = this
       let client
       if (this.connections[index].client) {
+        this.redisInfoVisible = true
         client = this.connections[index].client
         _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
       } else {
@@ -422,6 +453,9 @@ export default {
       }
       client.on('error', function (error) {
         console.log(error.code)
+        if (error.code === undefined) {
+          _this.$message.error('无法连接服务器，请检查连接信息')
+        }
         if (error.code === 'ECONNREFUSED') {
           _this.$message.error('无法连接服务器，请检查连接信息')
         }
@@ -440,7 +474,7 @@ export default {
         _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
         _this.connections[index].connected = true
         _this.connections[index].client = client
-
+        this.redisInfoVisible = true
         client.config('get', 'databases', (err, res) => {
           console.log(res)
           if (!err && res[1]) {
@@ -489,6 +523,40 @@ export default {
         })
       })
     },
+    testConnection () {
+      if (this.connectionForm.ip === '') {
+        this.$message.error('请输入IP')
+        return
+      }
+      if (this.connectionForm.port === '') {
+        this.$message.error('请输入端口号')
+        return
+      }
+      const _this = this
+      let url = 'redis://'
+      if (this.connectionForm.password !== '') {
+        url += ':' + this.connectionForm.password + '@'
+      }
+      url += this.connectionForm.ip + ':' + this.connectionForm.port
+      const client = new Redis(url)
+      client.on('error', function (error) {
+        console.log(error.code)
+        if (error.code === undefined) {
+          _this.$message.error('无法连接服务器，请检查连接信息')
+        }
+        if (error.code === 'ECONNREFUSED') {
+          _this.$message.error('无法连接服务器，请检查连接信息')
+        }
+        if (error.code === 'NOAUTH') {
+          _this.$message.error('密码错误')
+        }
+        client.quit()
+      })
+      client.on('ready', function () {
+        _this.$message.success('连接成功')
+        client.quit()
+      })
+    },
     /**
      * 展示某个db下的所有key
      * @param connectionIndex
@@ -520,6 +588,14 @@ export default {
       this.connectionDialogFormVisible = true
     },
     saveConnection () {
+      if (this.connectionForm.ip === '') {
+        this.$message.error('请输入IP')
+        return
+      }
+      if (this.connectionForm.port === '') {
+        this.$message.error('请输入端口号')
+        return
+      }
       if (this.connectionForm.id) {
         this.connections[this.connectionForm.id] = {
           id: this.connectionForm.id,
@@ -531,6 +607,14 @@ export default {
           connected: false
         }
       } else {
+        if (this.connectionForm.ip === '') {
+          this.$message.error('请输入IP')
+          return
+        }
+        if (this.connectionForm.port === '') {
+          this.$message.error('请输入端口号')
+          return
+        }
         this.connections.push({
           id: this.connections.length,
           ip: this.connectionForm.ip,
@@ -540,8 +624,8 @@ export default {
           collapse: false,
           connected: false
         })
-        window.localStorage.setItem('connections', JSON.stringify(this.connections))
       }
+      window.localStorage.setItem('connections', JSON.stringify(this.connections))
       this.connectionDialogFormVisible = false
     },
     refreshConnection (index) {
@@ -604,6 +688,7 @@ export default {
         type: 'error'
       }).then(() => {
         this.connections.splice(index, 1)
+        window.localStorage.setItem('connections', JSON.stringify(this.connections))
         this.$message({
           type: 'success',
           message: '删除成功!'
@@ -743,6 +828,15 @@ export default {
         default:
           break
       }
+    },
+    openUrlWithOsBrowser (url) {
+      shell.openExternal(url)
+    },
+    checkUpdate () {
+      this.$message({
+        type: 'success',
+        message: '当前版本已是最版版本!'
+      })
     }
   }
 }
@@ -790,14 +884,13 @@ export default {
           }
         }
         .connections {
-          height: calc(100% - 50px);
+          height: calc(100% - 110px);
           overflow-y: auto;
-          margin-right: 2px;
           .connection-item {
             display: flex;
             align-items: center;
             cursor: pointer;
-            height: 35px;
+            height: 40px;
             img {
               width: 20px;
               height: 20px;
@@ -814,8 +907,13 @@ export default {
           .database-item {
             display: flex;
             align-items: center;
-            height: 35px;
+            height: 40px;
+            padding-right: 15px;
             cursor: pointer;
+            color: rgba(0,0,0,.65);
+            &:hover {
+              background-color: #F0F0F0;
+            }
             img {
               width: 20px;
               height: 15px;
@@ -825,6 +923,15 @@ export default {
               margin-left: 6px;
               -webkit-user-select: none;
             }
+            span {
+              margin-left: auto;
+            }
+          }
+          .checked {
+            color: #1890ff;
+            background-color: #e6f7ff;
+            font-weight: 500;
+            border-right: 3px solid #1890ff;;
           }
         }
         .no-connections {
@@ -879,6 +986,20 @@ export default {
           margin: 17px 8px;
           background: #FFFFFF;
           padding: 17px 17px;
+        }
+      }
+    }
+    .settings {
+      .mode{
+        .checked {
+          box-sizing:border-box;
+          border: 1px solid #1890ff;
+          border-radius: 4px;
+        }
+        .normal {
+          box-sizing:border-box;
+          border: 1px solid #ffffff;
+          border-radius: 4px;
         }
       }
     }

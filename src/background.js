@@ -1,6 +1,6 @@
 'use strict'
 
-import { app, protocol, BrowserWindow, ipcMain } from 'electron'
+import { app, protocol, BrowserWindow, ipcMain, shell } from 'electron'
 import {
   createProtocol
   /* installVueDevtools */
@@ -56,6 +56,13 @@ app.on('ready', async () => {
   if (isDevelopment && !process.env.IS_TEST) {
   }
   createWelcomeWindow()
+})
+
+app.on('web-contents-created', (e, webContents) => {
+  webContents.on('new-window', (event, url) => {
+    event.preventDefault()
+    shell.openExternal(url)
+  })
 })
 
 app.setAppUserModelId('RedisDesktopClient')
