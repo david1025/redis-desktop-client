@@ -12,7 +12,6 @@
         <div class="new-connection">
           <el-button class="btn-new" size="small" type="primary" icon="el-icon-plus" @click="newConnection">添加Redis连接</el-button>
         </div>
-<!--        <div class="vertical-line"></div>-->
         <div v-if="connections.length !== 0" class="connections">
           <div v-for="(item,index) in connections" :key="item.id">
             <div class="connection-item" @click="redisStatus(index)">
@@ -42,13 +41,63 @@
       </div>
       <div style="width: 1px;height: 100%;background-color: #E0E0E0;margin-bottom: 4px;"></div>
       <!-- no connection data -->
-      <div v-if="currentConnection === ''" style="flex: 1;height: 100%;">
+      <div v-if="currentConnection === '' && !redisInfoVisible" style="flex: 1;height: 100%;">
         <div class="no-connection-data">
           <p style="width: 100%;text-align: center;">请选择链接</p>
         </div>
       </div>
+      <div v-if="redisInfoVisible" style="background: #f0f2f5;flex: 1;height: calc(100% - 32px);overflow-y: auto;">
+        <div style="display: flex;width: 100%;margin-top: 8px;height: 180px;">
+          <el-card style="width: 32%;margin-left: 1%;" class="box-card">
+            <div style="display: flex;align-items: center;">
+              <i class="el-icon-monitor" style="font-size: 16px;"></i>
+              <span style="font-size: 16px;font-weight: 500;margin-left: 6px;">基本信息</span>
+            </div>
+            <div style="margin-top: 30px;">Redis版本：<span style="float: right;">{{redisMainInfo.version}}</span></div>
+            <div style="margin-top: 15px;">运行模式：<span style="float: right;">{{redisMainInfo.mode}}</span></div>
+            <div style="margin-top: 15px;">运行天数：<span style="float: right;">{{redisMainInfo.runDayCount}}</span></div>
+          </el-card>
+          <el-card style="width: 32%;margin-left: 1%;" class="box-card">
+            <div style="display: flex;align-items: center;">
+              <i class="el-icon-cpu" style="font-size: 16px;"></i>
+              <span style="font-size: 16px;font-weight: 500;margin-left: 6px;">内存信息</span>
+            </div>
+            <div style="margin-top: 30px;color: rgba(0,0,0,.45);">内存分配器：<span style="float: right;color: rgba(0,0,0,.85);">{{redisMainInfo.memAllocator}}</span></div>
+            <div style="margin-top: 15px;color: rgba(0,0,0,.45);">已用内存：<span style="float: right;color: rgba(0,0,0,.85);">{{redisMainInfo.usedMemory}}</span></div>
+            <div style="margin-top: 15px;color: rgba(0,0,0,.45);">系统总内存：<span style="float: right;color: rgba(0,0,0,.85);">{{redisMainInfo.serverMemory}}</span></div>
+          </el-card>
+          <el-card style="width: 32%;margin-left: 1%;margin-right: 1%;" class="box-card">
+            <div style="display: flex;align-items: center;">
+              <i class="el-icon-connection" style="font-size: 16px;"></i>
+              <span style="font-size: 16px;font-weight: 500;margin-left: 6px;">状态信息</span>
+            </div>
+            <div style="margin-top: 30px;">key总数：<span style="float: right;">{{redisMainInfo.keyCount}}</span></div>
+            <div style="margin-top: 15px;">客户端连接数：<span style="float: right;">{{redisMainInfo.clientCount}}</span></div>
+            <div style="margin-top: 15px;">阻塞客户端连接数：<span style="float: right;">{{redisMainInfo.blockedClientCount}}</span></div>
+          </el-card>
+        </div>
+        <div style="margin: 8px 1%;">
+          <el-table
+            :data="redisInfos"
+            style="width: 100%;">
+            <el-table-column
+              type="index"
+              label="序号"
+              width="80">
+            </el-table-column>
+            <el-table-column
+              prop="key"
+              label="参数名称">
+            </el-table-column>
+            <el-table-column
+              prop="value"
+              label="参数值">
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
       <!-- key list -->
-      <div v-if="currentDatabase !== ''" class="key-list">
+      <div v-if="currentDatabase !== '' && !redisInfoVisible" class="key-list">
         <div class="search">
           <el-input
             placeholder="请输key"
@@ -70,9 +119,9 @@
           </div>
         </div>
       </div>
-      <div v-if="currentDatabase !== ''" style="width: 1px;height: 100%;background-color: #E0E0E0;margin-bottom: 4px;"></div>
+      <div v-if="currentDatabase !== '' && !redisInfoVisible" style="width: 1px;height: 100%;background-color: #E0E0E0;margin-bottom: 4px;"></div>
       <!-- key-value 详情 -->
-      <div v-if="currentKey !== ''" class="key-content">
+      <div v-if="currentKey !== '' && !redisInfoVisible" class="key-content">
         <div class="key-info">
           <span style="font-size: 14px;font-weight: 400;color: rgba(0,0,0,.85);">Key:</span>
           <el-input size="small" style="width: 250px;margin-left: 4px;" v-model="currentKey">
@@ -225,7 +274,7 @@
         <el-button type="primary" size="small" @click="updateValue" style="float: right;margin-top: 6px;">保存</el-button>
       </div>
       <!-- no key data -->
-      <div v-if="currentKey === '' && currentConnection !== ''" style="flex: 1;height: 100%;margin: 0px 4px">
+      <div v-if="currentKey === '' && currentConnection !== '' && !redisInfoVisible" style="flex: 1;height: 100%;margin: 0px 4px">
         <div style="background: #E0E0E0;display: flex;align-items: center;height: 100%;">
           <p style="width: 100%;text-align: center;">请选择一个key值</p>
         </div>
@@ -296,28 +345,21 @@ export default {
         password: ''
       },
       connectionDialogFormVisible: false,
-      connections: [
-        {
-          id: 1,
-          ip: '106.2.13.200',
-          port: '6399',
-          password: 'R@d1s',
-          databases: [],
-          collapse: false,
-          connected: false,
-          client: ''
-        },
-        {
-          id: 2,
-          ip: '127.0.0.1',
-          port: '6379',
-          password: '',
-          databases: [],
-          collapse: false,
-          connected: false,
-          client: ''
-        }
-      ],
+      redisInfos: [],
+      redisMainInfo: {
+        keyCount: 0,
+        version: '',
+        os: '',
+        runDayCount: 0,
+        usedMemory: '',
+        serverMemory: '',
+        clientCount: 0,
+        blockedClientCount: 0,
+        mode: '',
+        memAllocator: ''
+      },
+      redisInfoVisible: false,
+      connections: [],
       keySearch: '',
       keys: [],
       currentConnection: '',
@@ -360,9 +402,11 @@ export default {
     ipcRenderer.send('close')
     this.platform = process.platform
     ipcRenderer.send('showMainWin')
+    this.connections = JSON.parse(window.localStorage.getItem('connections'))
   },
   methods: {
     redisStatus (index) {
+      this.redisInfoVisible = true
       const _this = this
       let client
       if (this.connections[index].client) {
@@ -379,10 +423,15 @@ export default {
       client.on('error', function (error) {
         console.log(error.code)
         if (error.code === 'ECONNREFUSED') {
-          _this.$message.error('无法连接服务器')
+          _this.$message.error('无法连接服务器，请检查连接信息')
         }
         if (error.code === 'NOAUTH') {
           _this.$message.error('密码错误')
+        }
+        if (error.code === 'ECONNRESET') {
+          _this.connections[index].client = ''
+          _this.currentConnection = ''
+          _this.$message.error('连接已断开，请重新连接')
         }
         client.quit()
       })
@@ -397,27 +446,46 @@ export default {
           if (!err && res[1]) {
             // eslint-disable-next-line handle-callback-err
             client.monitor(function (err, monitor) {
+              console.log(monitor)
               console.log(monitor.serverInfo)
               _this.connections[index].databases = []
+              _this.redisMainInfo.keyCount = 0
               for (let i = 0; i < res[1]; i++) {
                 let count = monitor.serverInfo['db' + i] === undefined ? '0' : monitor.serverInfo['db' + i]
                 if (count !== '0') {
                   count = count.split(',')[0].split('=')[1]
                 }
+                console.log(count)
+                _this.redisMainInfo.keyCount += parseInt(count)
                 _this.connections[index].databases.push({
                   id: i,
                   size: count
+                })
+              }
+
+              _this.redisMainInfo.version = monitor.serverInfo.redis_version
+              _this.redisMainInfo.os = monitor.serverInfo.os
+              _this.redisMainInfo.runDayCount = monitor.serverInfo.uptime_in_days
+              _this.redisMainInfo.serverMemory = monitor.serverInfo.total_system_memory_human
+              _this.redisMainInfo.usedMemory = monitor.serverInfo.used_memory_human
+              _this.redisMainInfo.clientCount = monitor.serverInfo.connected_clients
+              // 阻塞的客户端数量
+              _this.redisMainInfo.blockedClientCount = monitor.serverInfo.blocked_clients
+              // 运行模式
+              _this.redisMainInfo.mode = monitor.serverInfo.redis_mode
+              // 内存分配器
+              _this.redisMainInfo.memAllocator = monitor.serverInfo.mem_allocator
+
+              for (const key in monitor.serverInfo) {
+                _this.redisInfos.push({
+                  key: key,
+                  value: monitor.serverInfo[key]
                 })
               }
             })
           } else {
             console.log(err)
           }
-        })
-
-        // eslint-disable-next-line handle-callback-err
-        client.monitor(function (err, res) {
-          console.log(res) // ok
         })
       })
     },
@@ -436,9 +504,9 @@ export default {
       } catch (e) {
         redisClient.disconnect(true)
       }
-
       this.currentConnection = redisClient
       this.currentDatabase = databaseIndex
+      this.redisInfoVisible = false
       console.log(this.keys)
     },
     newConnection () {
@@ -472,6 +540,7 @@ export default {
           collapse: false,
           connected: false
         })
+        window.localStorage.setItem('connections', JSON.stringify(this.connections))
       }
       this.connectionDialogFormVisible = false
     },
@@ -485,14 +554,37 @@ export default {
           redisClient.monitor(function (err, monitor) {
             console.log(monitor.serverInfo)
             _this.connections[index].databases = []
+            _this.redisMainInfo.keyCount = 0
             for (let i = 0; i < res[1]; i++) {
               let count = monitor.serverInfo['db' + i] === undefined ? '0' : monitor.serverInfo['db' + i]
               if (count !== '0') {
                 count = count.split(',')[0].split('=')[1]
               }
+              _this.redisMainInfo.keyCount += parseInt(count)
               _this.connections[index].databases.push({
                 id: i,
                 size: count
+              })
+            }
+
+            _this.redisMainInfo.version = monitor.serverInfo.redis_version
+            _this.redisMainInfo.os = monitor.serverInfo.os
+            _this.redisMainInfo.runDayCount = monitor.serverInfo.uptime_in_days
+            _this.redisMainInfo.serverMemory = monitor.serverInfo.total_system_memory_human
+            _this.redisMainInfo.usedMemory = monitor.serverInfo.used_memory_human
+            _this.redisMainInfo.clientCount = monitor.serverInfo.connected_clients
+            // 阻塞的客户端数量
+            _this.redisMainInfo.blockedClientCount = monitor.serverInfo.blocked_clients
+            // 是否是cluster模式
+            _this.redisMainInfo.mode = monitor.serverInfo.redis_mode
+            // 内存分配器
+            _this.redisMainInfo.memAllocator = monitor.serverInfo.mem_allocator
+
+            _this.redisInfos = []
+            for (const key in monitor.serverInfo) {
+              _this.redisInfos.push({
+                key: key,
+                value: monitor.serverInfo[key]
               })
             }
             _this.$message({
@@ -737,11 +829,21 @@ export default {
         }
         .no-connections {
           height: calc(100% - 50px);
+          display: flex;
+          align-items: center;
           margin-right: 2px;
+          background-color: #f0f2f5;
+          p {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(0,0,0,.65);
+            width: 100%;
+            text-align: center;
+          }
         }
       }
       .no-connection-data {
-        background: #E0E0E0;
+        background: #f0f2f5;
         display: flex;
         align-items: center;
         height: 100%;
@@ -769,6 +871,9 @@ export default {
           margin: 17px 8px;
           padding: 0px 17px;
           background: #FFFFFF;
+          .el-input__inner {
+            padding: 0 11px !important;
+          }
         }
         .value-info {
           margin: 17px 8px;
@@ -808,4 +913,5 @@ export default {
     flex: 1 1;
     max-width: 62.5%;
   }
+
 </style>

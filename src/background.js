@@ -114,3 +114,12 @@ ipcMain.on('showMainWin', e =>
 ipcMain.on('minimize', e =>
   mainWin.minimize()
 )
+ipcMain.on('maximize', e =>
+  mainWin.maximize()
+)
+ipcMain.on('unmaximize', e =>
+  mainWin.unmaximize()
+)
+ipcMain.on('closeMainWin', e =>
+  mainWin === null ? '' : mainWin.close()
+)

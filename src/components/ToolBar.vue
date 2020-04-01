@@ -1,20 +1,22 @@
 <template>
   <div class="main">
 
-    <div class="item" @click="close">
-      <img style="width: 10px;height: 10px;" src="../assets/icon_close.png">
+    <div class="item close" @click="close">
+      <i class="el-icon-close" style="font-size: 15px;font-weight: 500"></i>
     </div>
-    <div class="item">
-      <img style="width: 10px;height: 10px;" src="../assets/icon_max.png">
+    <div v-if="!max" class="item" @click="maximize">
+      <i class="el-icon-full-screen" style="font-size: 13px;font-weight: 500"></i>
     </div>
-    <div class="item">
-      <img style="width: 10px;height: 10px;" src="../assets/icon_windows.png">
+    <div v-if="max" class="item" @click="unmaximize">
+      <img style="width: 10px;height: 10px;" src="../assets/icon_window.png">
     </div>
     <div class="item" @click="minimize">
-      <i class="el-icon-minus"></i>
-<!--      <img style="width: 10px;height: 10px;" src="../assets/icon_min.png">-->
+      <i class="el-icon-minus" style="font-size: 14px;font-weight: 500"></i>
     </div>
-    <div style="margin-right: auto;font-size: 14px;margin-left: 6px;">Redis Desktop Client</div>
+    <div style="margin-right: auto;margin-left: 6px;display: flex;align-items: center;">
+      <img src="../assets/icon_logo.png"/>
+      <span style="font-size: 14px;margin-left: 6px;">Redis Desktop Client</span>
+    </div>
   </div>
 </template>
 
@@ -22,13 +24,25 @@
 const { ipcRenderer } = require('electron')
 export default {
   name: 'ToolBar',
+  data () {
+    return {
+      max: false
+    }
+  },
   methods: {
     minimize () {
-      console.log(process.platform)
       ipcRenderer.send('minimize')
     },
+    maximize () {
+      ipcRenderer.send('maximize')
+      this.max = true
+    },
+    unmaximize () {
+      ipcRenderer.send('unmaximize')
+      this.max = false
+    },
     close () {
-      ipcRenderer.send('close')
+      ipcRenderer.send('closeMainWin')
     }
   }
 }
@@ -40,7 +54,6 @@ export default {
   flex-direction: row-reverse;
   align-items: center;
   -webkit-app-region: drag;
-  height: 28px;
   .item {
     height: 100%;
     cursor: pointer;
@@ -49,9 +62,17 @@ export default {
     display: flex;
     align-items: center;
     -webkit-app-region: no-drag;
+    &:hover {
+      background-color: #F0F0F0;
+    }
   }
-  .item :hover {
-    background: red;
+  .close {
+    &:hover {
+      background-color: red;
+      i {
+        color: white;
+      }
+    }
   }
 }
 </style>
