@@ -149,11 +149,11 @@
           <el-input size="small" style="width: 250px;margin-left: 4px;" v-model="currentKey">
           </el-input>
           <span style="font-size: 14px;font-weight: 400;color: rgba(0,0,0,.85);margin-left: 20px;">TTL : </span>
-          <el-input size="small" v-model="currentKeyTtl" style="width: 150px;margin-left: 4px;">
+          <el-input size="small" v-model="currentKeyTtl" style="width: 80px;margin-left: 4px;">
           </el-input>
           <div style="margin-left: auto;">
-            <el-button type="primary" size="small" icon="el-icon-edit-outline" style="margin-left: 10px;" @click="updateKeyAndTTLFormVisible = true">编辑</el-button>
-            <el-button type="primary" size="small" icon="el-icon-edit-outline" style="margin-left: 10px;" @click="updateKeyAndTTLFormVisible = true">刷新键值</el-button>
+            <el-button type="primary" size="small" icon="el-icon-edit-outline" style="margin-left: 10px;" @click="openUpdateKeyDialog">编辑</el-button>
+            <el-button type="primary" size="small" icon="el-icon-refresh-right" style="margin-left: 10px;" @click="getValue(currentKey)">刷新键值</el-button>
           </div>
         </div>
         <div style="background-color: #ffffff;margin: 8px;padding: 8px 0px;border-radius: 4px;">
@@ -171,14 +171,7 @@
           </div>
           <div v-if="currentKeyType === 'hash'" class="value-info">
             <div style="display: flex;align-items: center;">
-              <el-input
-                size="small"
-                placeholder="请输入内容"
-                suffix-icon="el-icon-date"
-                style="width: 200px;"
-                v-model="hashKeySearch">
-              </el-input>
-              <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+              <el-button type="primary" size="small" @click="openHashValueDialog">新增</el-button>
             </div>
             <el-table
               :data="currentHashValue"
@@ -190,29 +183,25 @@
               </el-table-column>
               <el-table-column
                 prop="key"
-                label="KEY"
-                width="180">
+                label="KEY">
               </el-table-column>
               <el-table-column
                 prop="value"
-                label="VALUE"
-                width="180">
+                label="VALUE">
               </el-table-column>
               <el-table-column
-                label="操作">
+                label=""
+                width="80">
+                <template slot-scope="scope">
+                  <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editHashValue(scope.row)"></i>
+                  <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteHashValue(scope.row)"></i>
+                </template>
               </el-table-column>
             </el-table>
           </div>
           <div v-if="currentKeyType === 'list'" class="value-info">
             <div style="display: flex;align-items: center;">
-              <el-input
-                size="small"
-                placeholder="请输入内容"
-                suffix-icon="el-icon-date"
-                style="width: 200px;"
-                v-model="hashKeySearch">
-              </el-input>
-              <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+              <el-button type="primary" size="small" @click="openOtherValueDialog">新增</el-button>
             </div>
             <el-table
               :data="currentListValue"
@@ -224,24 +213,20 @@
               </el-table-column>
               <el-table-column
                 prop="value"
-                label="VALUE"
-                width="180">
+                label="VALUE">
               </el-table-column>
               <el-table-column
-                label="操作">
+                label="操作" width="80">
+                <template slot-scope="scope">
+                  <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, scope.$index)"></i>
+                  <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteListValue(scope.$index)"></i>
+                </template>
               </el-table-column>
             </el-table>
           </div>
           <div v-if="currentKeyType === 'set'" class="value-info">
             <div style="display: flex;align-items: center;">
-              <el-input
-                size="small"
-                placeholder="请输入内容"
-                suffix-icon="el-icon-date"
-                style="width: 200px;"
-                v-model="hashKeySearch">
-              </el-input>
-              <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+              <el-button type="primary" size="small" @click="openOtherValueDialog">新增</el-button>
             </div>
             <el-table
               :data="currentSetValue"
@@ -253,24 +238,20 @@
               </el-table-column>
               <el-table-column
                 prop="value"
-                label="VALUE"
-                width="180">
+                label="VALUE">
               </el-table-column>
               <el-table-column
                 label="操作">
+                <template slot-scope="scope">
+                  <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, '')"></i>
+                  <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteSetValue(scope.row.value)"></i>
+                </template>
               </el-table-column>
             </el-table>
           </div>
           <div v-if="currentKeyType === 'zset'" class="value-info">
             <div style="display: flex;align-items: center;">
-              <el-input
-                size="small"
-                placeholder="请输入内容"
-                suffix-icon="el-icon-date"
-                style="width: 200px;"
-                v-model="hashKeySearch">
-              </el-input>
-              <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+              <el-button type="primary" size="small" @click="openOtherValueDialog">新增</el-button>
             </div>
             <el-table
               :data="currentZSetValue"
@@ -281,17 +262,19 @@
                 width="50">
               </el-table-column>
               <el-table-column
-                prop="member"
-                label="Member"
-                width="180">
+                prop="value"
+                label="Value">
               </el-table-column>
               <el-table-column
                 prop="score"
-                label="Score"
-                width="180">
+                label="Score">
               </el-table-column>
               <el-table-column
                 label="操作">
+                <template slot-scope="scope">
+                  <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, '')"></i>
+                  <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteZSetValue(scope.row.value)"></i>
+                </template>
               </el-table-column>
             </el-table>
           </div>
@@ -397,6 +380,34 @@
         <el-button size="small" type="primary" @click="editKeyAndTTL">确 定</el-button>
       </div>
     </el-dialog>
+    <el-dialog title="修改Key" :visible.sync="hashValueFormVisible">
+      <el-form :model="hashValueForm">
+        <el-form-item label="Key">
+          <el-input size="small"  v-model="hashValueForm.key" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="Value">
+          <el-input size="small"  v-model="hashValueForm.value" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="small" @click="hashValueFormVisible = false">取 消</el-button>
+        <el-button size="small" type="primary" @click="addOrUpdateHashValue">确 定</el-button>
+      </div>
+    </el-dialog>
+    <el-dialog title="修改Key" :visible.sync="otherValueFormVisible">
+      <el-form :model="otherValueForm">
+        <el-form-item v-if="currentKeyType === 'zset'" label="分数">
+          <el-input size="small"  v-model="otherValueForm.score" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="Value">
+          <el-input size="small"  v-model="otherValueForm.value" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="small" @click="otherValueFormVisible = false">取 消</el-button>
+        <el-button size="small" type="primary" @click="addOrUpdateOtherValue(currentKeyType)">确 定</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -483,7 +494,20 @@ export default {
         ttl: '-1'
       },
       settingsDialogFormVisible: false,
-      displayMode: 'normal'
+      displayMode: 'normal',
+      hashValueFormVisible: false,
+      hashValueForm: {
+        key: '',
+        value: '',
+        oldKey: ''
+      },
+      otherValueFormVisible: false,
+      otherValueForm: {
+        value: '',
+        oldValue: '',
+        score: '',
+        index: ''
+      }
     }
   },
   mounted () {
@@ -812,6 +836,11 @@ export default {
       // this.refreshConnection()
       this.updateKeys()
     },
+    openUpdateKeyDialog () {
+      this.updateKeyAndTTLForm.key = this.currentKey
+      this.updateKeyAndTTLForm.ttl = this.currentKeyTtl
+      this.updateKeyAndTTLFormVisible = true
+    },
     editKeyAndTTL () {
       if (this.updateKeyAndTTLForm.key === '') {
         this.$message.error('请输入KEY')
@@ -819,6 +848,24 @@ export default {
       }
       if (this.updateKeyAndTTLForm.ttl === '') {
         this.$message.error('请输入TTL')
+        return
+      }
+      if (this.updateKeyAndTTLForm.key === this.currentKey) {
+        if (parseInt(this.updateKeyAndTTLForm.ttl) !== this.currentKeyTtl) {
+          if (parseInt(this.updateKeyAndTTLForm.ttl) >= 0) {
+            this.currentConnection.pexpire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
+            this.currentKeyTtl = this.updateKeyAndTTLForm.ttl
+          } else {
+            this.currentConnection.persist(this.currentKey)
+            this.currentKeyTtl = -1
+          }
+        }
+        this.$message({
+          type: 'success',
+          message: '更新成功!'
+        })
+        this.updateKeyAndTTLFormVisible = false
+        this.updateKeys()
         return
       }
       this.currentConnection.exists(this.updateKeyAndTTLForm.key).then(exists => {
@@ -837,8 +884,10 @@ export default {
                 if (parseInt(this.updateKeyAndTTLForm.ttl) !== this.currentKeyTtl) {
                   if (parseInt(this.updateKeyAndTTLForm.ttl) >= 0) {
                     this.currentConnection.pexpire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
+                    this.currentKeyTtl = this.updateKeyAndTTLForm.ttl
                   } else {
                     this.currentConnection.persist(this.currentKey)
+                    this.currentKeyTtl = -1
                   }
                 }
                 this.$message({
@@ -864,8 +913,10 @@ export default {
             if (parseInt(this.updateKeyAndTTLForm.ttl) !== this.currentKeyTtl) {
               if (parseInt(this.updateKeyAndTTLForm.ttl) >= 0) {
                 this.currentConnection.pexpire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
+                this.currentKeyTtl = this.updateKeyAndTTLForm.ttl
               } else {
                 this.currentConnection.persist(this.currentKey)
+                this.currentKeyTtl = -1
               }
               this.currentKeyTtl = this.updateKeyAndTTLForm.ttl
             }
@@ -906,18 +957,13 @@ export default {
           this.currentConnection.hmset(key, value)
           break
         case 'list':
-          console.log(key, value)
           await this.currentConnection.lpush(key, value)
           break
         case 'set':
-          for (let i = 0; i < value.length; i++) {
-            this.currentConnection.sadd(key, value)
-          }
+          this.currentConnection.sadd(key, value)
           break
         case 'zset':
-          for (let i = 0; i < value.length; i++) {
-            this.currentConnection.zadd(key, score, value)
-          }
+          this.currentConnection.zadd(key, score, value)
           break
         default:
           break
@@ -937,6 +983,10 @@ export default {
       })
     },
     async getValue (key) {
+      this.currentConnection.defineCommand('lremindex', {
+        numberOfKeys: 1,
+        lua: 'local FLAG = "$$#__@DELETE@_REDIS_@PRO@__#$$" redis.call("lset", KEYS[1], ARGV[1], FLAG) redis.call("lrem", KEYS[1], 1, FLAG)'
+      })
       this.currentKey = key
       this.currentKeyType = await this.currentConnection.type(key)
       if (this.currentKeyType === 'none') {
@@ -946,6 +996,135 @@ export default {
       }
       this.getValueByType(key, this.currentKeyType)
       this.currentKeyTtl = await this.currentConnection.pttl(key)
+    },
+    openHashValueDialog () {
+      this.hashValueForm.key = ''
+      this.hashValueForm.value = ''
+      this.hashValueForm.oldKey = ''
+      this.hashValueFormVisible = true
+    },
+    addOrUpdateHashValue () {
+      const hashKey = this.hashValueForm.key
+      const hashValue = this.hashValueForm.value
+      const value = {}
+      value[hashKey] = hashValue
+      if (this.hashValueForm.oldKey !== '') {
+        this.currentConnection.hdel(this.currentKey, this.hashValueForm.oldKey)
+      }
+      this.setValueByType(this.currentKey, 'hash', value)
+
+      this.hashValueForm.key = ''
+      this.hashValueForm.value = ''
+      this.hashValueForm.oldKey = ''
+      this.$message({
+        type: 'success',
+        message: '成功!'
+      })
+      this.hashValueFormVisible = false
+      this.getValue(this.currentKey)
+    },
+    editHashValue (row) {
+      this.hashValueForm.key = row.key
+      this.hashValueForm.value = row.value
+      this.hashValueForm.oldKey = row.key
+      this.hashValueFormVisible = true
+    },
+    deleteHashValue (row) {
+      this.$confirm('此操作将永久删除该行数据, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'error'
+      }).then(() => {
+        this.currentConnection.hdel(this.currentKey, row.key)
+        this.$message({
+          type: 'success',
+          message: '删除成功!'
+        })
+        this.getValue(this.currentKey)
+      }).catch(() => {
+      })
+    },
+    openOtherValueDialog () {
+      this.otherValueForm.value = ''
+      this.otherValueFormVisible = true
+    },
+    editOtherValue (row, index) {
+      this.otherValueForm.value = row.value
+      this.otherValueForm.oldValue = row.value
+      this.otherValueForm.index = index
+      this.otherValueFormVisible = true
+    },
+    addOrUpdateOtherValue (keyType) {
+      if (this.otherValueForm.value === '') {
+        this.$message.error('值不能为空')
+        return
+      }
+      if (this.otherValueForm.index !== '') {
+        this.currentConnection.lset(this.currentKey, this.otherValueForm.index, this.otherValueForm.value)
+      } else {
+        if (this.currentKeyType === 'zset') {
+          this.currentConnection.zrem(this.currentKey, this.otherValueForm.oldValue)
+        }
+        if (this.currentKeyType === 'set') {
+          this.currentConnection.srem(this.currentKey, this.otherValueForm.oldValue)
+        }
+        this.setValueByType(this.currentKey, keyType, this.otherValueForm.value, this.otherValueForm.score)
+      }
+      this.$message({
+        type: 'success',
+        message: '成功!'
+      })
+      this.otherValueForm.value = ''
+      this.otherValueForm.index = ''
+      this.otherValueFormVisible = false
+      this.getValue(this.currentKey)
+    },
+    deleteListValue (index) {
+      this.$confirm('此操作将永久删除该行数据, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'error'
+      }).then(() => {
+        console.log(index)
+        this.currentConnection.lremindex(this.currentKey, index)
+        this.$message({
+          type: 'success',
+          message: '成功!'
+        })
+        this.getValue(this.currentKey)
+      }).catch(() => {
+      })
+    },
+    deleteSetValue (value) {
+      this.$confirm('此操作将永久删除该行数据, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'error'
+      }).then(() => {
+        this.currentConnection.srem(this.currentKey, value)
+        this.$message({
+          type: 'success',
+          message: '成功!'
+        })
+        this.getValue(this.currentKey)
+      }).catch(() => {
+      })
+    },
+    deleteZSetValue (value) {
+      console.log(value)
+      this.$confirm('此操作将永久删除该行数据, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'error'
+      }).then(() => {
+        this.currentConnection.zrem(this.currentKey, value)
+        this.$message({
+          type: 'success',
+          message: '成功!'
+        })
+        this.getValue(this.currentKey)
+      }).catch(() => {
+      })
     },
     getValueByType (key, type) {
       const _this = this
@@ -994,7 +1173,7 @@ export default {
             _this.currentZSetValue = []
             for (let i = 0; i < result.length; i++) {
               _this.currentZSetValue.push({
-                member: result[i],
+                value: result[i],
                 score: result[i + 1]
               })
               i++
