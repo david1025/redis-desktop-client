@@ -1,7 +1,25 @@
 <template>
   <div class="main">
-    <div v-if="platform !== 'darwin'" style="height: 30px;">
-      <tool-bar/>
+    <div v-if="platform !== 'darwin'" class="win-bar">
+      <div class="item close" @click="close">
+        <i class="el-icon-close" style="font-size: 15px;font-weight: 500"></i>
+      </div>
+      <div v-if="!max" class="item" @click="maximize">
+        <i class="el-icon-full-screen" style="font-size: 13px;font-weight: 500"></i>
+      </div>
+      <div v-if="max" class="item" @click="unmaximize">
+        <img style="width: 10px;height: 10px;" src="../assets/icon_window.png">
+      </div>
+      <div class="item" @click="minimize">
+        <i class="el-icon-minus" style="font-size: 14px;font-weight: 500"></i>
+      </div>
+      <div class="item" @click="settingsDialogFormVisible = true">
+        <i class="el-icon-setting setting" style="font-size: 14px;font-weight: 500"></i>
+      </div>
+      <div style="margin-right: auto;margin-left: 6px;display: flex;align-items: center;">
+        <img src="../assets/icon_logo.png"/>
+        <span style="font-size: 14px;margin-left: 6px;">Redis Desktop Client</span>
+      </div>
     </div>
     <div v-if="platform === 'darwin'" class="mac-bar">
       <i class="el-icon-setting setting" @click="settingsDialogFormVisible = true"></i>
@@ -105,19 +123,21 @@
             placeholder="请输key"
             prefix-icon="el-icon-search"
             size="mini"
+            @input="searchKey"
             v-model="keySearch">
           </el-input>
           <el-button size="mini" icon="el-icon-plus" class="btn-new-key" @click="newKeyDialogFormVisible = true"></el-button>
         </div>
         <div class="vertical-line"></div>
-        <div style="margin-top: 4px;">
-          <div v-for="item in keys" :key="item" style="display: flex;align-items: center;cursor: pointer;height: 35px;" @click="getValue(item)">
-            <img src="../assets/icon_key.png" style="width: 20px;height: 20px;margin-left: 6px;">
+        <div class="content">
+          <div v-for="item in showKeys" :key="item" class="item" :class="currentKey === item ? 'checked' : ''" @click="getValue(item)">
+            <img src="../assets/icon_key.png">
             <el-tooltip class="item" effect="dark" :content="item" placement="bottom-start">
-              <p style="margin-left: 6px;height: 25px;line-height: 25px;font-weight: 500;-webkit-user-select: none;overflow: hidden;text-overflow:ellipsis;white-space: nowrap;">
+              <p>
                 {{item}}
               </p>
             </el-tooltip>
+            <i class="el-icon-delete delete" @click="deleteKey"></i>
           </div>
         </div>
       </div>
@@ -132,148 +152,150 @@
           <el-input size="small" v-model="currentKeyTtl" style="width: 150px;margin-left: 4px;">
           </el-input>
           <div style="margin-left: auto;">
-            <el-button type="primary" size="small" icon="el-icon-edit-outline" circle style="margin-left: 10px;"></el-button>
-            <el-button type="danger" size="small" icon="el-icon-delete" circle style="margin-left: 10px;" @click="deleteKey"></el-button>
+            <el-button type="primary" size="small" icon="el-icon-edit-outline" style="margin-left: 10px;" @click="updateKeyAndTTLFormVisible = true">编辑</el-button>
+            <el-button type="primary" size="small" icon="el-icon-edit-outline" style="margin-left: 10px;" @click="updateKeyAndTTLFormVisible = true">刷新键值</el-button>
           </div>
         </div>
-        <div style="margin-top: 10px;">
-          <span>键值</span>
-        </div>
-        <div v-if="currentKeyType === 'string'" class="value-info">
-          <el-input
-            type="textarea"
-            v-model="currentValue"
-            :autosize="{ minRows: 20, maxRows: 30}"
-            placeholder="请输入内容">
-          </el-input>
-        </div>
-        <div v-if="currentKeyType === 'hash'" class="value-info">
-          <div style="display: flex;align-items: center;">
+        <div style="background-color: #ffffff;margin: 8px;padding: 8px 0px;border-radius: 4px;">
+          <div style="margin: 0px 16px 12px 16px;display: flex;align-items: center;height: 40px;">
+            <span style="font-size: 14px;">Value</span>
+            <el-button v-show="currentKeyType === 'string'" type="primary" size="small" @click="updateValue" style="margin-left: auto;margin-top: 6px;">保存</el-button>
+          </div>
+          <div v-if="currentKeyType === 'string'" class="value-info">
             <el-input
-              size="small"
-              placeholder="请输入内容"
-              suffix-icon="el-icon-date"
-              style="width: 200px;"
-              v-model="hashKeySearch">
+              type="textarea"
+              v-model="currentValue"
+              :autosize="{ minRows: 20, maxRows: 30}"
+              placeholder="请输入内容">
             </el-input>
-            <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
           </div>
-          <el-table
-            :data="currentHashValue"
-            style="width: 100%">
-            <el-table-column
-              type="index"
-              label="序号"
-              width="50">
-            </el-table-column>
-            <el-table-column
-              prop="key"
-              label="KEY"
-              width="180">
-            </el-table-column>
-            <el-table-column
-              prop="value"
-              label="VALUE"
-              width="180">
-            </el-table-column>
-            <el-table-column
-              label="操作">
-            </el-table-column>
-          </el-table>
-        </div>
-        <div v-if="currentKeyType === 'list'" class="value-info">
-          <div style="display: flex;align-items: center;">
-            <el-input
-              size="small"
-              placeholder="请输入内容"
-              suffix-icon="el-icon-date"
-              style="width: 200px;"
-              v-model="hashKeySearch">
-            </el-input>
-            <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+          <div v-if="currentKeyType === 'hash'" class="value-info">
+            <div style="display: flex;align-items: center;">
+              <el-input
+                size="small"
+                placeholder="请输入内容"
+                suffix-icon="el-icon-date"
+                style="width: 200px;"
+                v-model="hashKeySearch">
+              </el-input>
+              <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+            </div>
+            <el-table
+              :data="currentHashValue"
+              style="width: 100%">
+              <el-table-column
+                type="index"
+                label="序号"
+                width="50">
+              </el-table-column>
+              <el-table-column
+                prop="key"
+                label="KEY"
+                width="180">
+              </el-table-column>
+              <el-table-column
+                prop="value"
+                label="VALUE"
+                width="180">
+              </el-table-column>
+              <el-table-column
+                label="操作">
+              </el-table-column>
+            </el-table>
           </div>
-          <el-table
-            :data="currentListValue"
-            style="width: 100%">
-            <el-table-column
-              type="index"
-              label="序号"
-              width="50">
-            </el-table-column>
-            <el-table-column
-              prop="value"
-              label="VALUE"
-              width="180">
-            </el-table-column>
-            <el-table-column
-              label="操作">
-            </el-table-column>
-          </el-table>
-        </div>
-        <div v-if="currentKeyType === 'set'" class="value-info">
-          <div style="display: flex;align-items: center;">
-            <el-input
-              size="small"
-              placeholder="请输入内容"
-              suffix-icon="el-icon-date"
-              style="width: 200px;"
-              v-model="hashKeySearch">
-            </el-input>
-            <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+          <div v-if="currentKeyType === 'list'" class="value-info">
+            <div style="display: flex;align-items: center;">
+              <el-input
+                size="small"
+                placeholder="请输入内容"
+                suffix-icon="el-icon-date"
+                style="width: 200px;"
+                v-model="hashKeySearch">
+              </el-input>
+              <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+            </div>
+            <el-table
+              :data="currentListValue"
+              style="width: 100%">
+              <el-table-column
+                type="index"
+                label="序号"
+                width="50">
+              </el-table-column>
+              <el-table-column
+                prop="value"
+                label="VALUE"
+                width="180">
+              </el-table-column>
+              <el-table-column
+                label="操作">
+              </el-table-column>
+            </el-table>
           </div>
-          <el-table
-            :data="currentSetValue"
-            style="width: 100%">
-            <el-table-column
-              type="index"
-              label="序号"
-              width="50">
-            </el-table-column>
-            <el-table-column
-              prop="value"
-              label="VALUE"
-              width="180">
-            </el-table-column>
-            <el-table-column
-              label="操作">
-            </el-table-column>
-          </el-table>
-        </div>
-        <div v-if="currentKeyType === 'zset'" class="value-info">
-          <div style="display: flex;align-items: center;">
-            <el-input
-              size="small"
-              placeholder="请输入内容"
-              suffix-icon="el-icon-date"
-              style="width: 200px;"
-              v-model="hashKeySearch">
-            </el-input>
-            <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+          <div v-if="currentKeyType === 'set'" class="value-info">
+            <div style="display: flex;align-items: center;">
+              <el-input
+                size="small"
+                placeholder="请输入内容"
+                suffix-icon="el-icon-date"
+                style="width: 200px;"
+                v-model="hashKeySearch">
+              </el-input>
+              <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+            </div>
+            <el-table
+              :data="currentSetValue"
+              style="width: 100%">
+              <el-table-column
+                type="index"
+                label="序号"
+                width="50">
+              </el-table-column>
+              <el-table-column
+                prop="value"
+                label="VALUE"
+                width="180">
+              </el-table-column>
+              <el-table-column
+                label="操作">
+              </el-table-column>
+            </el-table>
           </div>
-          <el-table
-            :data="currentZSetValue"
-            style="width: 100%">
-            <el-table-column
-              type="index"
-              label="序号"
-              width="50">
-            </el-table-column>
-            <el-table-column
-              prop="member"
-              label="Member"
-              width="180">
-            </el-table-column>
-            <el-table-column
-              prop="score"
-              label="Score"
-              width="180">
-            </el-table-column>
-            <el-table-column
-              label="操作">
-            </el-table-column>
-          </el-table>
+          <div v-if="currentKeyType === 'zset'" class="value-info">
+            <div style="display: flex;align-items: center;">
+              <el-input
+                size="small"
+                placeholder="请输入内容"
+                suffix-icon="el-icon-date"
+                style="width: 200px;"
+                v-model="hashKeySearch">
+              </el-input>
+              <el-button type="primary" size="small" @click="updateValue" style="margin-left: auto;">新增</el-button>
+            </div>
+            <el-table
+              :data="currentZSetValue"
+              style="width: 100%">
+              <el-table-column
+                type="index"
+                label="序号"
+                width="50">
+              </el-table-column>
+              <el-table-column
+                prop="member"
+                label="Member"
+                width="180">
+              </el-table-column>
+              <el-table-column
+                prop="score"
+                label="Score"
+                width="180">
+              </el-table-column>
+              <el-table-column
+                label="操作">
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
-        <el-button type="primary" size="small" @click="updateValue" style="float: right;margin-top: 6px;">保存</el-button>
       </div>
       <!-- no key data -->
       <div v-if="currentKey === '' && currentConnection !== '' && !redisInfoVisible" style="flex: 1;height: 100%;margin: 0px 4px">
@@ -343,29 +365,51 @@
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="newKeyForm.keyType === 'string'" label="Value">
+        <el-form-item v-if="newKeyForm.keyType === 'zset'" label="分数">
+          <el-input size="small"  v-model="newKeyForm.score" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item v-if="newKeyForm.keyType !== 'hash'" label="Value">
           <el-input size="small"  v-model="newKeyForm.value" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item v-if="newKeyForm.keyType === 'hash'" label="HASH-KEY">
+          <el-input size="small"  v-model="newKeyForm.hashKey" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item v-if="newKeyForm.keyType === 'hash'" label="HASH-Value">
+          <el-input size="small"  v-model="newKeyForm.hashValue" autocomplete="off"></el-input>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="newKeyDialogFormVisible = false">取 消</el-button>
-        <el-button type="primary" @click="saveKey">确 定</el-button>
+        <el-button size="small" @click="newKeyDialogFormVisible = false">取 消</el-button>
+        <el-button size="small" type="primary" @click="saveKey">确 定</el-button>
+      </div>
+    </el-dialog>
+    <el-dialog title="修改Key" :visible.sync="updateKeyAndTTLFormVisible">
+      <el-form :model="updateKeyAndTTLForm">
+        <el-form-item label="Key">
+          <el-input size="small"  v-model="updateKeyAndTTLForm.key" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="TTL">
+          <el-input size="small"  v-model="updateKeyAndTTLForm.ttl" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="small" @click="updateKeyAndTTLFormVisible = false">取 消</el-button>
+        <el-button size="small" type="primary" @click="editKeyAndTTL">确 定</el-button>
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import ToolBar from '../components/ToolBar'
 const { ipcRenderer } = require('electron')
 const Redis = require('ioredis')
 const { shell } = require('electron')
 export default {
   name: 'Home',
-  components: { ToolBar },
   data () {
     return {
       platform: '',
+      max: false,
       testNum: 0,
       connectionForm: {
         id: '',
@@ -391,6 +435,7 @@ export default {
       connections: [],
       keySearch: '',
       keys: [],
+      showKeys: [],
       currentConnection: '',
       currentDatabase: '',
       currentKey: '',
@@ -423,7 +468,19 @@ export default {
       newKeyForm: {
         key: '',
         keyType: '',
-        value: ''
+        score: '',
+        value: '',
+        hashKey: '',
+        hashValue: ''
+      },
+      newHashValue: [],
+      newListValue: [],
+      newSetValue: [],
+      newZSetValue: [],
+      updateKeyAndTTLFormVisible: false,
+      updateKeyAndTTLForm: {
+        key: '',
+        ttl: '-1'
       },
       settingsDialogFormVisible: false,
       displayMode: 'normal'
@@ -436,6 +493,20 @@ export default {
     this.connections = JSON.parse(window.localStorage.getItem('connections')) === null ? [] : JSON.parse(window.localStorage.getItem('connections'))
   },
   methods: {
+    minimize () {
+      ipcRenderer.send('minimize')
+    },
+    maximize () {
+      ipcRenderer.send('maximize')
+      this.max = true
+    },
+    unmaximize () {
+      ipcRenderer.send('unmaximize')
+      this.max = false
+    },
+    close () {
+      ipcRenderer.send('closeMainWin')
+    },
     redisStatus (index) {
       const _this = this
       let client
@@ -569,13 +640,13 @@ export default {
         // 选择当前选中的数据库
         redisClient.select(databaseIndex)
         this.keys = await redisClient.keys('*')
+        this.showKeys = this.keys
       } catch (e) {
         redisClient.disconnect(true)
       }
       this.currentConnection = redisClient
       this.currentDatabase = databaseIndex
       this.redisInfoVisible = false
-      console.log(this.keys)
     },
     newConnection () {
       this.connectionDialogFormVisible = true
@@ -696,15 +767,41 @@ export default {
       }).catch(() => {
       })
     },
+    searchKey (val) {
+      if (val && val !== '') {
+        this.showKeys = []
+        for (let i = 0; this.keys.length; i++) {
+          if (this.keys[i].indexOf(val) >= 0) {
+            this.showKeys.push(this.keys[i])
+          }
+        }
+      } else {
+        this.showKeys = this.keys
+      }
+    },
     async updateKeys () {
       this.keys = await this.currentConnection.keys('*')
+      this.showKeys = this.keys
     },
     async saveKey () {
       if (this.newKeyForm.keyType === 'string') {
         this.setValueByType(this.newKeyForm.key, this.newKeyForm.keyType, this.newKeyForm.value)
       }
       if (this.newKeyForm.keyType === 'hash') {
+        const hashKey = this.newKeyForm.hashKey
+        const hashValue = this.newKeyForm.hashValue
+        const value = {}
+        value[hashKey] = hashValue
+        this.setValueByType(this.newKeyForm.key, this.newKeyForm.keyType, value)
+      }
+      if (this.newKeyForm.keyType === 'list') {
         this.setValueByType(this.newKeyForm.key, this.newKeyForm.keyType, this.newKeyForm.value)
+      }
+      if (this.newKeyForm.keyType === 'set') {
+        this.setValueByType(this.newKeyForm.key, this.newKeyForm.keyType, this.newKeyForm.value)
+      }
+      if (this.newKeyForm.keyType === 'zset') {
+        this.setValueByType(this.newKeyForm.key, this.newKeyForm.keyType, this.newKeyForm.value, this.newKeyForm.score)
       }
       this.newKeyDialogFormVisible = false
       this.newKeyForm = {
@@ -712,7 +809,77 @@ export default {
         keyType: '',
         value: ''
       }
+      // this.refreshConnection()
       this.updateKeys()
+    },
+    editKeyAndTTL () {
+      if (this.updateKeyAndTTLForm.key === '') {
+        this.$message.error('请输入KEY')
+        return
+      }
+      if (this.updateKeyAndTTLForm.ttl === '') {
+        this.$message.error('请输入TTL')
+        return
+      }
+      this.currentConnection.exists(this.updateKeyAndTTLForm.key).then(exists => {
+        if (exists) {
+          this.$confirm('当前key已经存在, 是否覆盖?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            this.currentConnection.exists(this.currentKey).then(exists => {
+              if (exists) {
+                if (this.updateKeyAndTTLForm.key !== this.currentKey) {
+                  this.currentConnection.rename(this.currentKey, this.updateKeyAndTTLForm.key)
+                  this.currentKey = this.updateKeyAndTTLForm.key
+                }
+                if (parseInt(this.updateKeyAndTTLForm.ttl) !== this.currentKeyTtl) {
+                  if (parseInt(this.updateKeyAndTTLForm.ttl) >= 0) {
+                    this.currentConnection.pexpire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
+                  } else {
+                    this.currentConnection.persist(this.currentKey)
+                  }
+                }
+                this.$message({
+                  type: 'success',
+                  message: '更新成功!'
+                })
+              } else {
+                this.$message.error('该key已被删除')
+              }
+              this.updateKeyAndTTLFormVisible = false
+              this.updateKeys()
+            })
+          }).catch(() => {
+          })
+        }
+      }).then(() => {
+        this.currentConnection.exists(this.currentKey).then(exists => {
+          if (exists) {
+            if (this.updateKeyAndTTLForm.key !== this.currentKey) {
+              this.currentConnection.rename(this.currentKey, this.updateKeyAndTTLForm.key)
+              this.currentKey = this.updateKeyAndTTLForm.key
+            }
+            if (parseInt(this.updateKeyAndTTLForm.ttl) !== this.currentKeyTtl) {
+              if (parseInt(this.updateKeyAndTTLForm.ttl) >= 0) {
+                this.currentConnection.pexpire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
+              } else {
+                this.currentConnection.persist(this.currentKey)
+              }
+              this.currentKeyTtl = this.updateKeyAndTTLForm.ttl
+            }
+            this.$message({
+              type: 'success',
+              message: '更新成功!'
+            })
+          } else {
+            this.$message.error('该key已被删除')
+          }
+          this.updateKeys()
+          this.updateKeyAndTTLFormVisible = false
+        })
+      })
     },
     deleteKey () {
       this.$confirm('此操作将永久删除该key, 是否继续?', '提示', {
@@ -730,7 +897,7 @@ export default {
       }).catch(() => {
       })
     },
-    setValueByType (key, keyType, value) {
+    async setValueByType (key, keyType, value, score) {
       switch (keyType) {
         case 'string':
           this.currentConnection.set(key, value)
@@ -739,8 +906,17 @@ export default {
           this.currentConnection.hmset(key, value)
           break
         case 'list':
+          console.log(key, value)
+          await this.currentConnection.lpush(key, value)
+          break
+        case 'set':
           for (let i = 0; i < value.length; i++) {
-            this.currentConnection.lset(key, i, value[i])
+            this.currentConnection.sadd(key, value)
+          }
+          break
+        case 'zset':
+          for (let i = 0; i < value.length; i++) {
+            this.currentConnection.zadd(key, score, value)
           }
           break
         default:
@@ -848,6 +1024,36 @@ export default {
     height: 100%;
     width: 100%;
     overflow-y: hidden;
+    .win-bar {
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      -webkit-app-region: drag;
+      height: 30px;
+
+      .item {
+        height: 100%;
+        cursor: pointer;
+        padding-left: 15px;
+        padding-right: 15px;
+        display: flex;
+        align-items: center;
+        -webkit-app-region: no-drag;
+
+        &:hover {
+          background-color: #F0F0F0;
+        }
+      }
+      .close {
+        &:hover {
+          background-color: red;
+
+          i {
+            color: white;
+          }
+        }
+      }
+    }
     .mac-bar {
       height: 45px;
       -webkit-app-region: drag;
@@ -966,6 +1172,40 @@ export default {
             margin-left: 6px;
           }
         }
+        .content {
+          .item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            height: 35px;
+            img {
+              width: 20px;
+              height: 20px;
+              margin-left: 8px;
+            }
+            p {
+              margin-left: 6px;
+              height: 25px;
+              line-height: 25px;
+              font-weight: 500;
+              -webkit-user-select: none;
+              overflow: hidden;
+              text-overflow:ellipsis;
+              white-space: nowrap;
+            }
+            .delete {
+              margin-left: auto;
+              margin-right: 8px;
+              &:hover {
+                color: red;
+              }
+            }
+          }
+          .checked {
+            background-color: #e6f7ff;
+            font-weight: 500;
+          }
+        }
       }
       .key-content {
         flex: 1;
@@ -975,17 +1215,18 @@ export default {
           display: flex;
           align-items: center;
           height: 88px;
-          margin: 17px 8px;
+          margin: 8px 8px;
           padding: 0px 17px;
           background: #FFFFFF;
+          border-radius: 4px;
           .el-input__inner {
             padding: 0 11px !important;
           }
         }
         .value-info {
-          margin: 17px 8px;
+          margin: 8px 0px;
           background: #FFFFFF;
-          padding: 17px 17px;
+          padding: 0px 17px;
         }
       }
     }
