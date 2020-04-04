@@ -9,7 +9,7 @@ module.exports = {
         publish: [
           {
             provider: 'generic',
-            url: 'http://127.0.0.1/exe' // 此处是服务器或者node服务器包文件的目录地址，把打包好的文件都拖进去
+            url: 'http://106.2.13.200:11111/redis_desktop_client/exe' // 此处是服务器或者node服务器包文件的目录地址，把打包好的文件都拖进去
           }
         ],
         win: {

@@ -67,7 +67,7 @@
           <p style="width: 100%;text-align: center;">请选择链接</p>
         </div>
       </div>
-      <div v-if="redisInfoVisible" style="background: #f0f2f5;flex: 1;height: calc(100% - 32px);overflow-y: auto;">
+      <div v-if="redisInfoVisible && currentConnection !== ''" style="background: #f0f2f5;flex: 1;height: calc(100% - 32px);overflow-y: auto;">
         <div style="display: flex;width: 100%;margin-top: 8px;height: 180px;">
           <el-card style="width: 32%;margin-left: 1%;" class="box-card">
             <div style="display: flex;align-items: center;">
@@ -283,7 +283,7 @@
       </div>
       <!-- no key data -->
       <div v-if="currentKey === '' && currentConnection !== '' && !redisInfoVisible" style="flex: 1;height: 100%;">
-        <div style="background: #E0E0E0;display: flex;align-items: center;height: 100%;">
+        <div style="background: #f0f2f5;display: flex;align-items: center;height: 100%;">
           <p style="width: 100%;text-align: center;">请选择一个key值</p>
         </div>
       </div>
@@ -1385,7 +1385,6 @@ export default {
           height: calc(100% - 50px);
           display: flex;
           align-items: center;
-          margin-right: 2px;
           background-color: #f0f2f5;
           p {
             font-size: 14px;

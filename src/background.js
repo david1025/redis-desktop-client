@@ -97,7 +97,7 @@ function createMainWindow () {
       experimentalFeatures: true
     }
   })
-  if (!process.env.IS_TEST) mainWin.webContents.openDevTools()
+  // if (!process.env.IS_TEST) mainWin.webContents.openDevTools()
   mainWin.loadURL(winURL + '#/Home')
   mainWin.on('closed', () => {
     mainWin = null
