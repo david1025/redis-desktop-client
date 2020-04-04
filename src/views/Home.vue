@@ -1268,7 +1268,7 @@ export default {
       align-items: center;
       -webkit-app-region: drag;
       height: 30px;
-
+      background: #ffffff;
       .item {
         height: 100%;
         cursor: pointer;
