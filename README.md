@@ -1,6 +1,6 @@
 # Redis Desktop Client
 
-Medis is a beautiful, easy-to-use Redis management application built on the modern web with
+Redis Desktop Client is a beautiful, Redis GUI Client management application built on the modern web with
  [Electron](https://github.com/electron/electron), 
  [Vue](https://github.com/vuejs/vue), 
  and [element](https://github.com/ElemeFE/element). 
@@ -8,14 +8,13 @@ Medis is a beautiful, easy-to-use Redis management application built on the mode
 
 ## Download on Windows
 Download latest `exe` package from 
-[release](https://github.com/qishibo/AnotherRedisDesktopManager/releases) 
-[or [gitee](https://gitee.com/qishibo/AnotherRedisDesktopManager/releases) in China]
+[release](https://github.com/david1025/redis-desktop-client/releases/download/1.0.0/Redis.Desktop.Client.Setup.1.0.0.exe)
 
 ## Download on macOS
 
 Download latest `dmg` package from 
-[release](https://github.com/qishibo/AnotherRedisDesktopManager/releases) 
-[or [gitee](https://gitee.com/qishibo/AnotherRedisDesktopManager/releases) in China]
+[release](https://github.com/david1025/redis-desktop-client/releases/download/1.0.0/Redis.Desktop.Client-1.0.0.dmg) 
+
 ## License
 
 MIT
