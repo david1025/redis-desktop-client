@@ -32,15 +32,16 @@
         </div>
         <div v-if="connections.length !== 0" class="connections">
           <div v-for="(item,index) in connections" :key="item.id">
-            <div class="connection-item" @click="redisStatus(index)">
-              <img src="../assets/icon_redis.png">
+            <div class="connection-item" @dblclick="redisStatus(index)" @click="redisInfoVisible = true" @contextmenu="openMenu($event, index)">
+              <img v-if="item.connected" src="../assets/icon_redis.png">
+              <img v-if="!item.connected" src="../assets/icon_redis_gery.png">
               <p>{{item.ip}}@{{item.port}}</p>
               <div style="margin-left: auto;" >
                 <i v-if="item.connected" style="margin-left: 6px;" class="el-icon-refresh-right" @click.stop="refreshConnection(index)"></i>
                 <i v-if="item.connected" style="margin-left: 6px;" class="el-icon-edit-outline" @click.stop="editConnection(index)"></i>
                 <i style="margin-left: 6px;" class="el-icon-delete" @click.stop="deleteConnection(index)"></i>
-                <i v-if="!item.collapse" style="margin-left: 6px;margin-right: 10px;" class="el-icon-arrow-right"></i>
-                <i v-if="item.collapse" style="margin-left: 6px;margin-right: 10px;" class="el-icon-arrow-down"></i>
+                <i v-if="!item.collapse" style="margin-left: 6px;margin-right: 10px;" class="el-icon-arrow-right" @click.stop="item.collapse = true"></i>
+                <i v-if="item.collapse" style="margin-left: 6px;margin-right: 10px;" class="el-icon-arrow-down" @click.stop="item.collapse = false"></i>
               </div>
             </div>
             <div v-if="item.collapse">
@@ -156,9 +157,9 @@
             <el-button type="primary" size="small" icon="el-icon-refresh-right" style="margin-left: 10px;" @click="getValue(currentKey)">刷新键值</el-button>
           </div>
         </div>
-        <div style="background-color: #ffffff;margin: 8px;padding: 8px 0px;border-radius: 4px;">
+        <div style="background-color: #ffffff;margin: 8px;padding: 8px 0px;border-radius: 4px;height: calc(100% - 176px);overflow-y: auto;">
           <div style="margin: 0px 16px 12px 16px;display: flex;align-items: center;height: 40px;">
-            <span style="font-size: 14px;">Value</span>
+            <span style="font-size: 14px;font-weight: 500;">Value</span>
             <el-button v-show="currentKeyType === 'string'" type="primary" size="small" @click="updateValue" style="margin-left: auto;margin-top: 6px;">保存</el-button>
           </div>
           <div v-if="currentKeyType === 'string'" class="value-info">
@@ -281,13 +282,13 @@
         </div>
       </div>
       <!-- no key data -->
-      <div v-if="currentKey === '' && currentConnection !== '' && !redisInfoVisible" style="flex: 1;height: 100%;margin: 0px 4px">
+      <div v-if="currentKey === '' && currentConnection !== '' && !redisInfoVisible" style="flex: 1;height: 100%;">
         <div style="background: #E0E0E0;display: flex;align-items: center;height: 100%;">
           <p style="width: 100%;text-align: center;">请选择一个key值</p>
         </div>
       </div>
     </div>
-    <el-dialog title="新建连接" :visible.sync="connectionDialogFormVisible">
+    <el-dialog title="新建连接" :close-on-click-modal="false" :visible.sync="connectionDialogFormVisible">
       <el-form :model="connectionForm">
 <!--        <el-form-item label="连接名称 :">-->
 <!--          <el-input size="small" v-model="connectionForm.name" autocomplete="off"></el-input>-->
@@ -308,22 +309,23 @@
         <el-button type="primary" size="small" @click="saveConnection">确 定</el-button>
       </div>
     </el-dialog>
-    <el-dialog title="设置" :visible.sync="settingsDialogFormVisible">
+    <el-dialog title="设置" :close-on-click-modal="false" :visible.sync="settingsDialogFormVisible">
       <div class="settings">
-        <p style="margin-left: 5px;font-weight: 500;">风格设置</p>
-        <div class="mode" style="display: flex;text-align: center;">
-          <div style="padding: 5px;cursor: pointer;" :class="displayMode === 'normal' ? 'checked' : 'normal'" @click="displayMode = 'normal'">
-            <img src="https://gw.alipayobjects.com/zos/antfincdn/NQ%24zoisaD2/jpRkZQMyYRryryPNtyIC.svg" alt="light">
-            <p style="margin: 0;">常规</p>
-          </div>
-          <div style="margin-left: 30px;padding: 5px;cursor: pointer;" :class="displayMode === 'dart' ? 'checked' : 'normal'" @click="displayMode = 'dart'">
-            <img src="https://gw.alipayobjects.com/zos/antfincdn/hmKaLQvmY2/LCkqqYNmvBEbokSDscrm.svg" alt="realDark">
-            <p style="margin: 0;">深色</p>
-          </div>
-        </div>
-        <p style="margin-left: 5px;font-weight: 500;margin-top: 20px;">关于</p>
+<!--        <p style="margin-left: 5px;font-weight: 500;">风格设置</p>-->
+<!--        <div class="mode" style="display: flex;text-align: center;">-->
+<!--          <div style="padding: 5px;cursor: pointer;" :class="displayMode === 'normal' ? 'checked' : 'normal'" @click="displayMode = 'normal'">-->
+<!--            <img src="https://gw.alipayobjects.com/zos/antfincdn/NQ%24zoisaD2/jpRkZQMyYRryryPNtyIC.svg" alt="light">-->
+<!--            <p style="margin: 0;">常规</p>-->
+<!--          </div>-->
+<!--          <div style="margin-left: 30px;padding: 5px;cursor: pointer;" :class="displayMode === 'dart' ? 'checked' : 'normal'" @click="displayMode = 'dart'">-->
+<!--            <img src="https://gw.alipayobjects.com/zos/antfincdn/hmKaLQvmY2/LCkqqYNmvBEbokSDscrm.svg" alt="realDark">-->
+<!--            <p style="margin: 0;">深色</p>-->
+<!--          </div>-->
+<!--        </div>-->
+        <p style="margin-left: 5px;font-weight: 500;margin-top: 0px;font-size: 15px;">关于</p>
         <div style="margin-left: 5px;">
-          <span>当前版本：  </span><span style="color: rgba(0,0,0,.65);">V1.0.1</span> <el-button size="mini" style="margin-left: 20px;" @click="checkUpdate">检查更新</el-button>
+          <span>当前版本：  </span><span style="color: rgba(0,0,0,.65);">V1.0.0</span>
+<!--          <el-button size="mini" style="margin-left: 20px;" @click="checkUpdate">检查更新</el-button>-->
         </div>
         <div style="margin-left: 5px;margin-top: 10px;">
           <span>Github：  </span><a href="#" @click="openUrlWithOsBrowser('https://github.com/david1025')">https://github.com/david1025</a>
@@ -333,7 +335,7 @@
         <el-button type="primary" size="small" @click="settingsDialogFormVisible = false">确 定</el-button>
       </div>
     </el-dialog>
-    <el-dialog title="新建Key-Value" :visible.sync="newKeyDialogFormVisible">
+    <el-dialog title="新建Key-Value" :close-on-click-modal="false" :visible.sync="newKeyDialogFormVisible">
       <el-form :model="connectionForm">
         <el-form-item label="Key">
           <el-input size="small"  v-model="newKeyForm.key" autocomplete="off"></el-input>
@@ -366,7 +368,7 @@
         <el-button size="small" type="primary" @click="saveKey">确 定</el-button>
       </div>
     </el-dialog>
-    <el-dialog title="修改Key" :visible.sync="updateKeyAndTTLFormVisible">
+    <el-dialog title="修改Key名称" :close-on-click-modal="false" :visible.sync="updateKeyAndTTLFormVisible">
       <el-form :model="updateKeyAndTTLForm">
         <el-form-item label="Key">
           <el-input size="small"  v-model="updateKeyAndTTLForm.key" autocomplete="off"></el-input>
@@ -380,7 +382,7 @@
         <el-button size="small" type="primary" @click="editKeyAndTTL">确 定</el-button>
       </div>
     </el-dialog>
-    <el-dialog title="修改Key" :visible.sync="hashValueFormVisible">
+    <el-dialog title="修改Key" :close-on-click-modal="false" :visible.sync="hashValueFormVisible">
       <el-form :model="hashValueForm">
         <el-form-item label="Key">
           <el-input size="small"  v-model="hashValueForm.key" autocomplete="off"></el-input>
@@ -394,7 +396,7 @@
         <el-button size="small" type="primary" @click="addOrUpdateHashValue">确 定</el-button>
       </div>
     </el-dialog>
-    <el-dialog title="修改Key" :visible.sync="otherValueFormVisible">
+    <el-dialog title="修改Key" :close-on-click-modal="false" :visible.sync="otherValueFormVisible">
       <el-form :model="otherValueForm">
         <el-form-item v-if="currentKeyType === 'zset'" label="分数">
           <el-input size="small"  v-model="otherValueForm.score" autocomplete="off"></el-input>
@@ -412,7 +414,8 @@
 </template>
 
 <script>
-const { ipcRenderer } = require('electron')
+const { remote, ipcRenderer } = require('electron')
+const { Menu, MenuItem } = remote
 const Redis = require('ioredis')
 const { shell } = require('electron')
 export default {
@@ -537,7 +540,7 @@ export default {
       if (this.connections[index].client) {
         this.redisInfoVisible = true
         client = this.connections[index].client
-        _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
+        // _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
       } else {
         let url = 'redis://'
         if (this.connections[index].password !== '') {
@@ -652,26 +655,7 @@ export default {
         client.quit()
       })
     },
-    /**
-     * 展示某个db下的所有key
-     * @param connectionIndex
-     * @param databaseIndex
-     * @returns {Promise<void>}
-     */
-    async showKeyList (connectionIndex, databaseIndex) {
-      const redisClient = this.connections[connectionIndex].client
-      try {
-        // 选择当前选中的数据库
-        redisClient.select(databaseIndex)
-        this.keys = await redisClient.keys('*')
-        this.showKeys = this.keys
-      } catch (e) {
-        redisClient.disconnect(true)
-      }
-      this.currentConnection = redisClient
-      this.currentDatabase = databaseIndex
-      this.redisInfoVisible = false
-    },
+
     newConnection () {
       this.connectionDialogFormVisible = true
     },
@@ -772,7 +756,7 @@ export default {
             })
           })
         } else {
-          console.log(err)
+          _this.$message.error('连接已断开，请重新连接')
         }
       })
     },
@@ -790,6 +774,77 @@ export default {
         })
       }).catch(() => {
       })
+    },
+    openMenu (e, index) {
+      const _this = this
+      const menu = new Menu()
+      if (this.connections[index].client) {
+        menu.append(new MenuItem({
+          label: '关闭连接',
+          click () {
+            // 向主进程发送要打开审查的命令
+            if (_this.connections[index].client === _this.currentConnection) {
+              _this.currentConnection = ''
+              _this.currentDatabase = ''
+              _this.currentKey = ''
+              _this.keys = []
+              _this.showKeys = []
+            }
+            _this.connections[index].client = null
+            _this.connections[index].databases = []
+            _this.connections[index].connected = false
+            _this.connections[index].collapse = false
+          }
+        }))
+        menu.append(new MenuItem({ type: 'separator' }))
+        menu.append(new MenuItem({
+          label: '刷新',
+          click () {
+            // 向主进程发送要打开审查的命令
+            _this.refreshConnection(index)
+          }
+        }))
+        menu.append(new MenuItem({ type: 'separator' }))
+      } else {
+        menu.append(new MenuItem({
+          label: '打开连接',
+          click () {
+            // 向主进程发送要打开审查的命令
+            _this.redisStatus(index)
+          }
+        }))
+        menu.append(new MenuItem({ type: 'separator' }))
+      }
+      menu.append(new MenuItem({
+        label: '删除连接',
+        click () {
+          _this.deleteConnection(index)
+        }
+      }))
+      this.mX = e.pageX
+      this.mY = e.pageY
+      e.preventDefault()
+      menu.popup({ window: remote.getCurrentWindow() })
+    },
+    /**
+     * 展示某个db下的所有key
+     * @param connectionIndex
+     * @param databaseIndex
+     * @returns {Promise<void>}
+     */
+    async showKeyList (connectionIndex, databaseIndex) {
+      const redisClient = this.connections[connectionIndex].client
+      try {
+        // 选择当前选中的数据库
+        redisClient.select(databaseIndex)
+        this.keys = await redisClient.keys('*')
+        this.showKeys = this.keys
+      } catch (e) {
+        redisClient.disconnect(true)
+      }
+      this.currentConnection = redisClient
+      this.currentDatabase = databaseIndex
+      this.redisInfoVisible = false
     },
     searchKey (val) {
       if (val && val !== '') {
@@ -983,19 +1038,23 @@ export default {
       })
     },
     async getValue (key) {
-      this.currentConnection.defineCommand('lremindex', {
-        numberOfKeys: 1,
-        lua: 'local FLAG = "$$#__@DELETE@_REDIS_@PRO@__#$$" redis.call("lset", KEYS[1], ARGV[1], FLAG) redis.call("lrem", KEYS[1], 1, FLAG)'
-      })
-      this.currentKey = key
-      this.currentKeyType = await this.currentConnection.type(key)
-      if (this.currentKeyType === 'none') {
-        this.$message.error('该key值不存在')
-        this.currentKey = ''
-        this.updateKeys()
+      try {
+        this.currentConnection.defineCommand('lremindex', {
+          numberOfKeys: 1,
+          lua: 'local FLAG = "$$#__@DELETE@_REDIS_@PRO@__#$$" redis.call("lset", KEYS[1], ARGV[1], FLAG) redis.call("lrem", KEYS[1], 1, FLAG)'
+        })
+        this.currentKey = key
+        this.currentKeyType = await this.currentConnection.type(key)
+        if (this.currentKeyType === 'none') {
+          this.$message.error('该key值不存在')
+          this.currentKey = ''
+          this.updateKeys()
+        }
+        this.getValueByType(key, this.currentKeyType)
+        this.currentKeyTtl = await this.currentConnection.pttl(key)
+      } catch (e) {
+        this.$message.error('连接已断开，请重新连接')
       }
-      this.getValueByType(key, this.currentKeyType)
-      this.currentKeyTtl = await this.currentConnection.pttl(key)
     },
     openHashValueDialog () {
       this.hashValueForm.key = ''
@@ -1238,6 +1297,7 @@ export default {
       -webkit-app-region: drag;
       display: flex;
       align-items: center;
+      background: #ffffff;
       .setting {
         margin-left: auto;
         margin-right: 22px;
@@ -1259,6 +1319,7 @@ export default {
     .container {
       display: flex;
       height: 100%;
+      background: #FFFFFF;
       .connection {
         width: 274px;
         height: 100%;
@@ -1279,7 +1340,7 @@ export default {
             img {
               width: 20px;
               height: 20px;
-              margin-left: 6px;
+              margin-left: 8px;
             }
             p {
               margin-left: 6px;
@@ -1296,6 +1357,7 @@ export default {
             padding-right: 15px;
             cursor: pointer;
             color: rgba(0,0,0,.65);
+            -webkit-user-select: none;
             &:hover {
               background-color: #F0F0F0;
             }
@@ -1352,6 +1414,8 @@ export default {
           }
         }
         .content {
+          height: calc(100% - 110px);
+          overflow-y: auto;
           .item {
             display: flex;
             align-items: center;
@@ -1374,7 +1438,7 @@ export default {
             }
             .delete {
               margin-left: auto;
-              margin-right: 8px;
+              padding: 0px 8px;
               &:hover {
                 color: red;
               }
@@ -1388,7 +1452,6 @@ export default {
       }
       .key-content {
         flex: 1;
-        height: 100%;
         background: #f0f2f5;
         .key-info {
           display: flex;
