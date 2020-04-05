@@ -217,7 +217,8 @@
                 label="VALUE">
               </el-table-column>
               <el-table-column
-                label="操作" width="80">
+                label=""
+                width="80">
                 <template slot-scope="scope">
                   <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, scope.$index)"></i>
                   <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteListValue(scope.$index)"></i>
@@ -242,7 +243,8 @@
                 label="VALUE">
               </el-table-column>
               <el-table-column
-                label="操作">
+                label="操作"
+                width="80">
                 <template slot-scope="scope">
                   <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, '')"></i>
                   <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteSetValue(scope.row.value)"></i>
@@ -271,7 +273,8 @@
                 label="Score">
               </el-table-column>
               <el-table-column
-                label="操作">
+                label=""
+                width="80">
                 <template slot-scope="scope">
                   <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, '')"></i>
                   <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteZSetValue(scope.row.value)"></i>
@@ -1237,6 +1240,7 @@ export default {
               })
               i++
             }
+            console.log(_this.currentZSetValue)
           })
           break
         default:
