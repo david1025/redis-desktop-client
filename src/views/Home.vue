@@ -170,13 +170,13 @@
               placeholder="请输入内容">
             </el-input>
           </div>
-          <div v-if="currentKeyType === 'hash'" class="value-info">
+          <div v-show="currentKeyType === 'hash'" class="value-info">
             <div style="display: flex;align-items: center;">
               <el-button type="primary" size="small" @click="openHashValueDialog">新增</el-button>
             </div>
             <el-table
               :data="currentHashValue"
-              style="width: 100%">
+              style="width: 100%;margin-top: 16px;">
               <el-table-column
                 type="index"
                 label="序号"
@@ -191,22 +191,22 @@
                 label="VALUE">
               </el-table-column>
               <el-table-column
-                label=""
-                width="80">
+                label="操作">
                 <template slot-scope="scope">
-                  <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editHashValue(scope.row)"></i>
-                  <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteHashValue(scope.row)"></i>
+                  <a @click="editHashValue(scope.row)">编辑</a>
+                  <el-divider direction="vertical"></el-divider>
+                  <a @click="deleteHashValue(scope.row)">删除</a>
                 </template>
               </el-table-column>
             </el-table>
           </div>
-          <div v-if="currentKeyType === 'list'" class="value-info">
+          <div v-show="currentKeyType === 'list'" class="value-info">
             <div style="display: flex;align-items: center;">
               <el-button type="primary" size="small" @click="openOtherValueDialog">新增</el-button>
             </div>
             <el-table
               :data="currentListValue"
-              style="width: 100%">
+              style="width: 100%;margin-top: 16px;">
               <el-table-column
                 type="index"
                 label="序号"
@@ -217,22 +217,22 @@
                 label="VALUE">
               </el-table-column>
               <el-table-column
-                label=""
-                width="80">
+                label="操作">
                 <template slot-scope="scope">
-                  <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, scope.$index)"></i>
-                  <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteListValue(scope.$index)"></i>
+                  <a @click="editOtherValue(scope.row, scope.$index)">编辑</a>
+                  <el-divider direction="vertical"></el-divider>
+                  <a @click="deleteListValue(scope.$index)">删除</a>
                 </template>
               </el-table-column>
             </el-table>
           </div>
-          <div v-if="currentKeyType === 'set'" class="value-info">
+          <div v-show="currentKeyType === 'set'" class="value-info">
             <div style="display: flex;align-items: center;">
               <el-button type="primary" size="small" @click="openOtherValueDialog">新增</el-button>
             </div>
             <el-table
               :data="currentSetValue"
-              style="width: 100%">
+              style="width: 100%;margin-top: 16px;">
               <el-table-column
                 type="index"
                 label="序号"
@@ -243,22 +243,22 @@
                 label="VALUE">
               </el-table-column>
               <el-table-column
-                label="操作"
-                width="80">
+                label="操作">
                 <template slot-scope="scope">
-                  <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, '')"></i>
-                  <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteSetValue(scope.row.value)"></i>
+                  <a @click="editOtherValue(scope.row, '')">编辑</a>
+                  <el-divider direction="vertical"></el-divider>
+                  <a @click="deleteSetValue(scope.row.value)">删除</a>
                 </template>
               </el-table-column>
             </el-table>
           </div>
-          <div v-if="currentKeyType === 'zset'" class="value-info">
+          <div v-show="currentKeyType === 'zset'" class="value-info">
             <div style="display: flex;align-items: center;">
               <el-button type="primary" size="small" @click="openOtherValueDialog">新增</el-button>
             </div>
             <el-table
               :data="currentZSetValue"
-              style="width: 100%">
+              style="width: 100%;margin-top: 16px;">
               <el-table-column
                 type="index"
                 label="序号"
@@ -273,11 +273,11 @@
                 label="Score">
               </el-table-column>
               <el-table-column
-                label=""
-                width="80">
+                label="操作">
                 <template slot-scope="scope">
-                  <i class="el-icon-edit-outline" style="font-size: 16px;" @click="editOtherValue(scope.row, '')"></i>
-                  <i class="el-icon-delete" style="margin-left: 8px;font-size: 16px;" @click="deleteZSetValue(scope.row.value)"></i>
+                  <a @click="editOtherValue(scope.row, '')">编辑</a>
+                  <el-divider direction="vertical"></el-divider>
+                  <a @click="deleteZSetValue(scope.row.value)">删除</a>
                 </template>
               </el-table-column>
             </el-table>
@@ -1113,6 +1113,7 @@ export default {
     editOtherValue (row, index) {
       this.otherValueForm.value = row.value
       this.otherValueForm.oldValue = row.value
+      this.otherValueForm.score = row.score
       this.otherValueForm.index = index
       this.otherValueFormVisible = true
     },
@@ -1138,6 +1139,7 @@ export default {
       })
       this.otherValueForm.value = ''
       this.otherValueForm.index = ''
+      this.otherValueForm.score = ''
       this.otherValueFormVisible = false
       this.getValue(this.currentKey)
     },
@@ -1240,7 +1242,6 @@ export default {
               })
               i++
             }
-            console.log(_this.currentZSetValue)
           })
           break
         default:
@@ -1520,5 +1521,22 @@ export default {
     flex: 1 1;
     max-width: 62.5%;
   }
-
+  .el-table {
+    color: rgba(0,0,0,.65) !important;
+  }
+  .el-table th {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0,0,0,.85);
+    background-color: #fafafa;
+  }
+  a {
+    color: #1890ff;
+    text-decoration: none;
+    background-color: transparent;
+    outline: none;
+    cursor: pointer;
+    transition: color .3s;
+    -webkit-text-decoration-skip: objects;
+  }
 </style>
