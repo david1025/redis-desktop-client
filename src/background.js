@@ -19,6 +19,7 @@ function createWelcomeWindow () {
     height: 400,
     show: false,
     frame: false,
+    transparent: true,
     webPreferences: {
       nodeIntegration: true
     }
@@ -89,7 +90,6 @@ function createMainWindow () {
     height: 800,
     show: false,
     frame: false,
-    transparent: true,
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 16, y: 30 },
     webPreferences: {

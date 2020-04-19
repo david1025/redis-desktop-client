@@ -17,7 +17,7 @@
         <i class="el-icon-setting setting" style="font-size: 14px;font-weight: 500"></i>
       </div>
       <div style="margin-right: auto;margin-left: 6px;display: flex;align-items: center;">
-        <img src="../assets/icon_logo.png"/>
+        <img style="width: 16px;height: 16px;" src="../assets/icon_logo.png"/>
         <span style="font-size: 14px;margin-left: 6px;">Redis Desktop Client</span>
       </div>
     </div>
@@ -32,10 +32,10 @@
         </div>
         <div v-if="connections.length !== 0" class="connections">
           <div v-for="(item,index) in connections" :key="item.id">
-            <div class="connection-item" @dblclick="redisStatus(index)" @click="redisInfoVisible = true" @contextmenu="openMenu($event, index)">
+            <div class="connection-item" @dblclick="redisStatus(index)" @click="getRedisInfo(index)" @contextmenu="openMenu($event, index)">
               <img v-if="item.connected" src="../assets/icon_redis.png">
               <img v-if="!item.connected" src="../assets/icon_redis_gery.png">
-              <p>{{item.ip}}@{{item.port}}</p>
+              <p :title="item.host + '@' + item.port">{{item.host}}@{{item.port}}</p>
               <div style="margin-left: auto;" >
                 <i v-if="item.connected" style="margin-left: 6px;" class="el-icon-refresh-right" @click.stop="refreshConnection(index)"></i>
                 <i v-if="item.connected" style="margin-left: 6px;" class="el-icon-edit-outline" @click.stop="editConnection(index)"></i>
@@ -67,7 +67,7 @@
           <p style="width: 100%;text-align: center;">请选择链接</p>
         </div>
       </div>
-      <div v-if="redisInfoVisible && currentConnection !== ''" style="background: #f0f2f5;flex: 1;height: calc(100% - 32px);overflow-y: auto;">
+      <div v-if="redisInfoVisible" style="background: #f0f2f5;flex: 1;height: calc(100% - 32px);overflow-y: auto;">
         <div style="display: flex;width: 100%;margin-top: 8px;height: 180px;">
           <el-card style="width: 32%;margin-left: 1%;" class="box-card">
             <div style="display: flex;align-items: center;">
@@ -128,18 +128,11 @@
             v-model="keySearch">
           </el-input>
           <el-button size="mini" icon="el-icon-plus" class="btn-new-key" @click="newKeyDialogFormVisible = true"></el-button>
+          <el-button size="mini" class="btn-new-key" @click="deleteDbAllKeys">Clear</el-button>
         </div>
         <div class="vertical-line"></div>
         <div class="content">
-          <div v-for="item in showKeys" :key="item" class="item" :class="currentKey === item ? 'checked' : ''" @click="getValue(item)">
-            <img src="../assets/icon_key.png">
-            <el-tooltip class="item" effect="dark" :content="item" placement="bottom-start">
-              <p>
-                {{item}}
-              </p>
-            </el-tooltip>
-            <i class="el-icon-delete delete" @click="deleteKey"></i>
-          </div>
+          <giant-tree :setting="setting" :nodes="keyTree" @onCreated="handleTreeCreated" @onClick="keyTreeClick" />
         </div>
       </div>
       <div v-if="currentDatabase !== '' && !redisInfoVisible" style="width: 1px;height: 100%;background-color: #E0E0E0;margin-bottom: 4px;"></div>
@@ -164,11 +157,24 @@
           </div>
           <div v-if="currentKeyType === 'string'" class="value-info">
             <el-input
+              v-if="stringValueType === 'text'"
               type="textarea"
               v-model="currentValue"
-              :autosize="{ minRows: 20, maxRows: 30}"
-              placeholder="请输入内容">
+              :autosize="{ minRows: 20, maxRows: 30}">
             </el-input>
+            <AceEditor
+              v-if="stringValueType === 'json'"
+              v-model="currentValue"
+              :lang="'json'"
+              :options="{
+                    maxLines: '30',
+                    minLines: '16',
+                    fontSize: '14px',
+                    autoScrollEditorIntoView: true,
+                    showPrintMargin: false,
+                    useWorker: false,
+                  }"
+            />
           </div>
           <div v-show="currentKeyType === 'hash'" class="value-info">
             <div style="display: flex;align-items: center;">
@@ -297,7 +303,7 @@
 <!--          <el-input size="small" v-model="connectionForm.name" autocomplete="off"></el-input>-->
 <!--        </el-form-item>-->
         <el-form-item label="IP :">
-          <el-input size="small" v-model="connectionForm.ip" autocomplete="off"></el-input>
+          <el-input size="small" v-model="connectionForm.host" autocomplete="off"></el-input>
         </el-form-item>
         <el-form-item label="端口 :">
           <el-input size="small" v-model="connectionForm.port" autocomplete="off"></el-input>
@@ -305,6 +311,30 @@
         <el-form-item label="密码 :">
           <el-input size="small" v-model="connectionForm.password" autocomplete="off"></el-input>
         </el-form-item>
+        <el-form-item label="SSH :">
+          <el-switch
+            v-model="connectionForm.ssh">
+          </el-switch>
+        </el-form-item>
+        <el-form-item label="Cluster :">
+          <el-switch
+            v-model="connectionForm.cluster">
+          </el-switch>
+        </el-form-item>
+        <div v-if="connectionForm.ssh">
+          <el-form-item label="SSH地址 :">
+            <el-input size="small" v-model="connectionForm.sshHost" autocomplete="off"></el-input>
+          </el-form-item>
+          <el-form-item label="SSH端口 :">
+            <el-input size="small" v-model="connectionForm.sshPort" autocomplete="off"></el-input>
+          </el-form-item>
+          <el-form-item label="SSH用户 :">
+            <el-input size="small" v-model="connectionForm.sshUser" autocomplete="off"></el-input>
+          </el-form-item>
+          <el-form-item label="SSH密码 :">
+            <el-input size="small" v-model="connectionForm.sshPassword" autocomplete="off"></el-input>
+          </el-form-item>
+        </div>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button size="small" @click="testConnection" style="float: left">测试连接</el-button>
@@ -417,22 +447,51 @@
 </template>
 
 <script>
+import AceEditor from '../components/AceEditor'
+import GiantTree from 'vue-giant-tree'
 const { remote, ipcRenderer } = require('electron')
+const { connectRedis } = require('../utils/redisConnection')
+const { isJSON } = require('../utils/jsonUtil')
+const { buffer2String } = require('../utils/hexUtil')
 const { Menu, MenuItem } = remote
-const Redis = require('ioredis')
 const { shell } = require('electron')
 export default {
   name: 'Home',
+  components: {
+    AceEditor,
+    GiantTree
+  },
+  watch: {
+    'connectionForm.cluster': function (val) {
+      if (this.connectionForm.cluster && this.connectionForm.ssh) {
+        this.connectionForm.cluster = false
+        this.$message.error('目前Cluster模式不支持SSH方式连接')
+      }
+    },
+    'connectionForm.ssh': function (val) {
+      if (this.connectionForm.cluster && this.connectionForm.ssh) {
+        this.connectionForm.ssh = false
+        this.$message.error('目前Cluster模式不支持SSH方式连接')
+      }
+    }
+  },
   data () {
     return {
+      timer: '',
       platform: '',
       max: false,
       testNum: 0,
       connectionForm: {
         id: '',
-        ip: '',
+        host: '',
         port: '',
-        password: ''
+        password: '',
+        ssh: false,
+        sshHost: '',
+        sshPort: '',
+        sshUser: '',
+        sshPassword: '',
+        cluster: false
       },
       connectionDialogFormVisible: false,
       redisInfos: [],
@@ -453,12 +512,38 @@ export default {
       keySearch: '',
       keys: [],
       showKeys: [],
+      keyBufferList: [],
+      keyTree: [],
+      keyAllTree: [],
+      treeObject: {},
+      setting: {
+        check: {
+          enable: true
+        },
+        data: {
+          simpleData: {
+            enable: true,
+            pIdKey: 'pid'
+          }
+        },
+        edit: {
+          enable: true,
+          showRemoveBtn: this.showRemoveBtn
+        },
+        view: {
+          showIcon: false,
+          addHoverDom: this.addHoverDom,
+          removeHoverDom: this.removeHoverDom
+        }
+      },
       currentConnection: '',
       currentDatabase: '',
       currentKey: '',
+      currentKeyBuffer: '',
       currentKeyType: '',
       currentKeyTtl: '',
       currentValue: '',
+      stringValueType: 'text',
       currentHashValue: [],
       currentListValue: [],
       currentSetValue: [],
@@ -516,11 +601,20 @@ export default {
       }
     }
   },
+  created () {
+    this.timer = setInterval(this.keepConnectionsAlive, 10000)
+  },
+  destroyed () {
+    clearInterval(this.timer)
+  },
   mounted () {
     ipcRenderer.send('close')
     this.platform = process.platform
     ipcRenderer.send('showMainWin')
     this.connections = JSON.parse(window.localStorage.getItem('connections')) === null ? [] : JSON.parse(window.localStorage.getItem('connections'))
+    for (let i = 0; i < this.connections.length; i++) {
+      this.connections[i].client = ''
+    }
   },
   methods: {
     minimize () {
@@ -539,93 +633,186 @@ export default {
     },
     redisStatus (index) {
       const _this = this
-      let client
-      if (this.connections[index].client) {
+      if (this.connections[index].client && this.connections[index].client !== '') {
         this.redisInfoVisible = true
-        client = this.connections[index].client
+        // client = this.connections[index].client
         // _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
       } else {
-        let url = 'redis://'
-        if (this.connections[index].password !== '') {
-          url += ':' + this.connections[index].password + '@'
+        const config = {
+          host: this.connections[index].host,
+          port: this.connections[index].port,
+          password: this.connections[index].password,
+          ssh: this.connections[index].ssh,
+          sshHost: this.connections[index].sshHost,
+          sshPort: this.connections[index].sshPort,
+          sshUser: this.connections[index].sshUser,
+          sshPassword: this.connections[index].sshPassword,
+          cluster: this.connections[index].cluster
         }
-        url += this.connections[index].ip + ':' + this.connections[index].port
-        client = new Redis(url)
+        connectRedis(config, function (client) {
+          client.on('ready', function () {
+            // this.$router.push('KeyValues')
+          })
+          client.config('get', 'databases', (err, res) => {
+            if (!err && res[1]) {
+              _this.connections[index].connected = true
+              _this.connections[index].client = client
+              _this.currentConnection = client
+              client.info().then((reply) => {
+                const content = reply.split('\n')
+                const lines = {}
+
+                for (let i of content) {
+                  i = i.replace(/\s/ig, '')
+                  if (i.startsWith('#') || !i) continue
+
+                  const kv = i.split(':')
+                  lines[kv[0]] = kv[1]
+                }
+                _this.connections[index].databases = []
+                _this.redisMainInfo.keyCount = 0
+
+                // cluster模式只能使用db0
+                if (_this.connections[index].cluster) {
+                  _this.connections[index].databases.push({
+                    id: 0,
+                    size: ''
+                  })
+                } else {
+                  for (let i = 0; i < parseInt(res[1].trim()); i++) {
+                    let count = lines['db' + i] === undefined ? '0' : lines['db' + i]
+                    if (count !== '0') {
+                      count = count.split(',')[0].split('=')[1]
+                    }
+                    _this.redisMainInfo.keyCount += parseInt(count)
+                    _this.connections[index].databases.push({
+                      id: i,
+                      size: count
+                    })
+                  }
+                }
+
+                _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
+                _this.redisInfoVisible = true
+                _this.redisMainInfo.version = lines.redis_version
+                _this.redisMainInfo.os = lines.os
+                _this.redisMainInfo.runDayCount = lines.uptime_in_days
+                _this.redisMainInfo.serverMemory = lines.total_system_memory_human
+                _this.redisMainInfo.usedMemory = lines.used_memory_human
+                _this.redisMainInfo.clientCount = lines.connected_clients
+                // 阻塞的客户端数量
+                _this.redisMainInfo.blockedClientCount = lines.blocked_clients
+                // 运行模式
+                _this.redisMainInfo.mode = lines.redis_mode
+                // 内存分配器
+                _this.redisMainInfo.memAllocator = lines.mem_allocator
+
+                for (const key in lines) {
+                  _this.redisInfos.push({
+                    key: key,
+                    value: lines[key]
+                  })
+                }
+              }).catch((e) => {
+                console.log(e)
+              })
+            } else {
+            }
+          })
+          client.on('error', function (error) {
+            if (error.code === undefined) {
+              _this.$message.error('无法连接服务器，请检查连接信息')
+            }
+            if (error.code === 'ECONNREFUSED') {
+              _this.$message.error('无法连接服务器，请检查连接信息')
+            }
+            if (error.code === 'NOAUTH') {
+              _this.$message.error('密码错误')
+            }
+            if (error.code === 'ECONNRESET') {
+              _this.connections[index].client = ''
+              _this.currentConnection = ''
+              _this.$message.error('连接已断开，请重新连接')
+            }
+            client.quit()
+          })
+        }, function (err) {
+          _this.$message.error(err.message)
+        })
       }
-      client.on('error', function (error) {
-        console.log(error.code)
-        if (error.code === undefined) {
-          _this.$message.error('无法连接服务器，请检查连接信息')
-        }
-        if (error.code === 'ECONNREFUSED') {
-          _this.$message.error('无法连接服务器，请检查连接信息')
-        }
-        if (error.code === 'NOAUTH') {
-          _this.$message.error('密码错误')
-        }
-        if (error.code === 'ECONNRESET') {
-          _this.connections[index].client = ''
-          _this.currentConnection = ''
-          _this.$message.error('连接已断开，请重新连接')
-        }
-        client.quit()
-      })
-      client.on('ready', function () {
-        // this.$router.push('KeyValues')
-        _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
-        _this.connections[index].connected = true
-        _this.connections[index].client = client
-        this.redisInfoVisible = true
+    },
+    getRedisInfo (index) {
+      const _this = this
+      const client = this.connections[index].client
+      if (client) {
         client.config('get', 'databases', (err, res) => {
-          console.log(res)
           if (!err && res[1]) {
             // eslint-disable-next-line handle-callback-err
-            client.monitor(function (err, monitor) {
-              console.log(monitor)
-              console.log(monitor.serverInfo)
-              _this.connections[index].databases = []
-              _this.redisMainInfo.keyCount = 0
-              for (let i = 0; i < res[1]; i++) {
-                let count = monitor.serverInfo['db' + i] === undefined ? '0' : monitor.serverInfo['db' + i]
-                if (count !== '0') {
-                  count = count.split(',')[0].split('=')[1]
-                }
-                console.log(count)
-                _this.redisMainInfo.keyCount += parseInt(count)
-                _this.connections[index].databases.push({
-                  id: i,
-                  size: count
-                })
+            client.info().then((reply) => {
+              const content = reply.split('\n')
+              const lines = {}
+
+              for (let i of content) {
+                i = i.replace(/\s/ig, '')
+                if (i.startsWith('#') || !i) continue
+
+                const kv = i.split(':')
+                lines[kv[0]] = kv[1]
               }
+              // _this.connections[index].databases = []
+              // _this.redisMainInfo.keyCount = 0
+              //
+              // // cluster模式只能使用db0
+              // if (_this.connections[index].cluster) {
+              //   _this.connections[index].databases.push({
+              //     id: 0,
+              //     size: ''
+              //   })
+              // } else {
+              //   for (let i = 0; i < parseInt(res[1].trim()); i++) {
+              //     let count = lines['db' + i] === undefined ? '0' : lines['db' + i]
+              //     if (count !== '0') {
+              //       count = count.split(',')[0].split('=')[1]
+              //     }
+              //     _this.redisMainInfo.keyCount += parseInt(count)
+              //     _this.connections[index].databases.push({
+              //       id: i,
+              //       size: count
+              //     })
+              //   }
+              // }
 
-              _this.redisMainInfo.version = monitor.serverInfo.redis_version
-              _this.redisMainInfo.os = monitor.serverInfo.os
-              _this.redisMainInfo.runDayCount = monitor.serverInfo.uptime_in_days
-              _this.redisMainInfo.serverMemory = monitor.serverInfo.total_system_memory_human
-              _this.redisMainInfo.usedMemory = monitor.serverInfo.used_memory_human
-              _this.redisMainInfo.clientCount = monitor.serverInfo.connected_clients
+              // _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
+              _this.redisInfoVisible = true
+              _this.redisMainInfo.version = lines.redis_version
+              _this.redisMainInfo.os = lines.os
+              _this.redisMainInfo.runDayCount = lines.uptime_in_days
+              _this.redisMainInfo.serverMemory = lines.total_system_memory_human
+              _this.redisMainInfo.usedMemory = lines.used_memory_human
+              _this.redisMainInfo.clientCount = lines.connected_clients
               // 阻塞的客户端数量
-              _this.redisMainInfo.blockedClientCount = monitor.serverInfo.blocked_clients
+              _this.redisMainInfo.blockedClientCount = lines.blocked_clients
               // 运行模式
-              _this.redisMainInfo.mode = monitor.serverInfo.redis_mode
+              _this.redisMainInfo.mode = lines.redis_mode
               // 内存分配器
-              _this.redisMainInfo.memAllocator = monitor.serverInfo.mem_allocator
+              _this.redisMainInfo.memAllocator = lines.mem_allocator
 
-              for (const key in monitor.serverInfo) {
+              for (const key in lines) {
                 _this.redisInfos.push({
                   key: key,
-                  value: monitor.serverInfo[key]
+                  value: lines[key]
                 })
               }
+            }).catch((e) => {
+              console.log(e)
             })
-          } else {
-            console.log(err)
           }
         })
-      })
+      }
     },
     testConnection () {
-      if (this.connectionForm.ip === '') {
+      const _this = this
+      if (this.connectionForm.host === '') {
         this.$message.error('请输入IP')
         return
       }
@@ -633,63 +820,112 @@ export default {
         this.$message.error('请输入端口号')
         return
       }
-      const _this = this
-      let url = 'redis://'
-      if (this.connectionForm.password !== '') {
-        url += ':' + this.connectionForm.password + '@'
+      if (this.connectionForm.ssh && this.connectionForm.sshHost === '') {
+        this.$message.error('请输入ssh地址')
+        return
       }
-      url += this.connectionForm.ip + ':' + this.connectionForm.port
-      const client = new Redis(url)
-      client.on('error', function (error) {
-        console.log(error.code)
-        if (error.code === undefined) {
-          _this.$message.error('无法连接服务器，请检查连接信息')
-        }
-        if (error.code === 'ECONNREFUSED') {
-          _this.$message.error('无法连接服务器，请检查连接信息')
-        }
-        if (error.code === 'NOAUTH') {
-          _this.$message.error('密码错误')
-        }
-        client.quit()
-      })
-      client.on('ready', function () {
-        _this.$message.success('连接成功')
-        client.quit()
+      if (this.connectionForm.ssh && this.connectionForm.sshPort === '') {
+        this.$message.error('请输入ssh端口号')
+        return
+      }
+      if (this.connectionForm.ssh && this.connectionForm.sshUser === '') {
+        this.$message.error('请输入ssh用户名')
+        return
+      }
+      if (this.connectionForm.ssh && this.connectionForm.sshPassword === '') {
+        this.$message.error('请输入ssh密码')
+        return
+      }
+      connectRedis(this.connectionForm, function (client) {
+        // eslint-disable-next-line handle-callback-err
+        client.config('get', 'databases', (err, res) => {
+          if (!err) {
+            _this.$message.success('连接成功')
+          }
+        })
+      }, function (err) {
+        _this.$message.error(err.message)
       })
     },
-
+    keepConnectionsAlive () {
+      for (let i = 0; i < this.connections.length; i++) {
+        if (this.connections[i].connected) {
+          // eslint-disable-next-line handle-callback-err
+          this.connections[i].client.config('get', 'databases', (err, res) => {
+          })
+        }
+      }
+    },
     newConnection () {
+      this.connectionForm = {
+        id: '',
+        host: '',
+        port: '',
+        password: '',
+        ssh: false,
+        sshHost: '',
+        sshPort: '',
+        sshUser: '',
+        sshPassword: ''
+      }
       this.connectionDialogFormVisible = true
     },
     editConnection (index) {
       this.connectionForm.id = this.connections[index].id
-      this.connectionForm.ip = this.connections[index].ip
+      this.connectionForm.host = this.connections[index].host
       this.connectionForm.port = this.connections[index].port
       this.connectionForm.password = this.connections[index].password
+      this.connectionForm.ssh = this.connections[index].ssh
+      this.connectionForm.sshHost = this.connections[index].sshHost
+      this.connectionForm.sshPort = this.connections[index].sshPort
+      this.connectionForm.sshUser = this.connections[index].sshUser
+      this.connectionForm.sshPassword = this.connections[index].sshPassword
+      this.connectionForm.cluster = this.connections[index].cluster
       this.connectionDialogFormVisible = true
     },
     saveConnection () {
-      if (this.connectionForm.ip === '') {
+      if (this.connectionForm.host === '') {
         this.$message.error('请输入IP')
         return
       }
       if (this.connectionForm.port === '') {
         this.$message.error('请输入端口号')
+        return
+      }
+      if (this.connectionForm.ssh && this.connectionForm.sshHost === '') {
+        this.$message.error('请输入ssh地址')
+        return
+      }
+      if (this.connectionForm.ssh && this.connectionForm.sshPort === '') {
+        this.$message.error('请输入ssh端口号')
+        return
+      }
+      if (this.connectionForm.ssh && this.connectionForm.sshUser === '') {
+        this.$message.error('请输入ssh用户名')
+        return
+      }
+      if (this.connectionForm.ssh && this.connectionForm.sshPassword === '') {
+        this.$message.error('请输入ssh密码')
         return
       }
       if (this.connectionForm.id) {
         this.connections[this.connectionForm.id] = {
           id: this.connectionForm.id,
-          ip: this.connectionForm.ip,
+          host: this.connectionForm.host,
           port: this.connectionForm.port,
           password: this.connectionForm.password,
+          ssh: this.connectionForm.ssh,
+          sshHost: this.connectionForm.sshHost,
+          sshPort: this.connectionForm.sshPort,
+          sshUser: this.connectionForm.sshUser,
+          sshPassword: this.connectionForm.sshPassword,
+          cluster: this.connectionForm.cluster,
           databases: [],
           collapse: false,
           connected: false
         }
       } else {
-        if (this.connectionForm.ip === '') {
+        if (this.connectionForm.host === '') {
           this.$message.error('请输入IP')
           return
         }
@@ -699,64 +935,105 @@ export default {
         }
         this.connections.push({
           id: this.connections.length,
-          ip: this.connectionForm.ip,
+          host: this.connectionForm.host,
           port: this.connectionForm.port,
           password: this.connectionForm.password,
+          ssh: this.connectionForm.ssh,
+          sshHost: this.connectionForm.sshHost,
+          sshPort: this.connectionForm.sshPort,
+          sshUser: this.connectionForm.sshUser,
+          sshPassword: this.connectionForm.sshPassword,
+          cluster: this.connectionForm.cluster,
           databases: [],
           collapse: false,
           connected: false
         })
       }
-      window.localStorage.setItem('connections', JSON.stringify(this.connections))
+      for (let i = 0; i < this.connections.length; i++) {
+        this.connections[i].id = i
+      }
+      const connectionsCopyStr = JSON.stringify(this.connections)
+      const connectionsCopyObj = JSON.parse(connectionsCopyStr)
+      for (let i = 0; i < connectionsCopyObj.length; i++) {
+        connectionsCopyObj[i].databases = []
+        connectionsCopyObj[i].client = ''
+        connectionsCopyObj[i].collapse = false
+        connectionsCopyObj[i].connected = false
+      }
+      window.localStorage.setItem('connections', JSON.stringify(connectionsCopyObj))
       this.connectionDialogFormVisible = false
     },
     refreshConnection (index) {
       const _this = this
+      if (!index) {
+        for (let i = 0; i < this.connections.length; i++) {
+          if (this.currentConnection === this.connections[i].client) {
+            index = i
+          }
+        }
+      }
       const redisClient = this.connections[index].client
+
       redisClient.config('get', 'databases', (err, res) => {
-        console.log(res)
         if (!err && res[1]) {
           // eslint-disable-next-line handle-callback-err
-          redisClient.monitor(function (err, monitor) {
-            console.log(monitor.serverInfo)
+          redisClient.info().then((reply) => {
+            const content = reply.split('\n')
+            const lines = {}
+
+            for (let i of content) {
+              i = i.replace(/\s/ig, '')
+              if (i.startsWith('#') || !i) continue
+
+              const kv = i.split(':')
+              lines[kv[0]] = kv[1]
+            }
             _this.connections[index].databases = []
             _this.redisMainInfo.keyCount = 0
-            for (let i = 0; i < res[1]; i++) {
-              let count = monitor.serverInfo['db' + i] === undefined ? '0' : monitor.serverInfo['db' + i]
-              if (count !== '0') {
-                count = count.split(',')[0].split('=')[1]
-              }
-              _this.redisMainInfo.keyCount += parseInt(count)
+
+            // cluster模式只能使用db0
+            if (_this.connections[index].cluster) {
               _this.connections[index].databases.push({
-                id: i,
-                size: count
+                id: 0,
+                size: ''
               })
+            } else {
+              for (let i = 0; i < parseInt(res[1].trim()); i++) {
+                let count = lines['db' + i] === undefined ? '0' : lines['db' + i]
+                if (count !== '0') {
+                  count = count.split(',')[0].split('=')[1]
+                }
+                _this.redisMainInfo.keyCount += parseInt(count)
+                _this.connections[index].databases.push({
+                  id: i,
+                  size: count
+                })
+              }
             }
 
-            _this.redisMainInfo.version = monitor.serverInfo.redis_version
-            _this.redisMainInfo.os = monitor.serverInfo.os
-            _this.redisMainInfo.runDayCount = monitor.serverInfo.uptime_in_days
-            _this.redisMainInfo.serverMemory = monitor.serverInfo.total_system_memory_human
-            _this.redisMainInfo.usedMemory = monitor.serverInfo.used_memory_human
-            _this.redisMainInfo.clientCount = monitor.serverInfo.connected_clients
+            // _this.connections[index].collapse ? _this.connections[index].collapse = false : _this.connections[index].collapse = true
+            // _this.redisInfoVisible = true
+            _this.redisMainInfo.version = lines.redis_version
+            _this.redisMainInfo.os = lines.os
+            _this.redisMainInfo.runDayCount = lines.uptime_in_days
+            _this.redisMainInfo.serverMemory = lines.total_system_memory_human
+            _this.redisMainInfo.usedMemory = lines.used_memory_human
+            _this.redisMainInfo.clientCount = lines.connected_clients
             // 阻塞的客户端数量
-            _this.redisMainInfo.blockedClientCount = monitor.serverInfo.blocked_clients
-            // 是否是cluster模式
-            _this.redisMainInfo.mode = monitor.serverInfo.redis_mode
+            _this.redisMainInfo.blockedClientCount = lines.blocked_clients
+            // 运行模式
+            _this.redisMainInfo.mode = lines.redis_mode
             // 内存分配器
-            _this.redisMainInfo.memAllocator = monitor.serverInfo.mem_allocator
+            _this.redisMainInfo.memAllocator = lines.mem_allocator
 
-            _this.redisInfos = []
-            for (const key in monitor.serverInfo) {
+            for (const key in lines) {
               _this.redisInfos.push({
                 key: key,
-                value: monitor.serverInfo[key]
+                value: lines[key]
               })
             }
-            _this.$message({
-              type: 'success',
-              message: '刷新成功!'
-            })
+          }).catch((e) => {
+            console.log(e)
           })
         } else {
           _this.$message.error('连接已断开，请重新连接')
@@ -769,7 +1046,17 @@ export default {
         cancelButtonText: '取消',
         type: 'error'
       }).then(() => {
+        if (this.currentConnection === this.connections[index].client) {
+          this.currentConnection = ''
+          this.redisInfoVisible = false
+        }
         this.connections.splice(index, 1)
+        if (this.connections.length === 0) {
+          this.redisInfoVisible = false
+        }
+        for (let i = 0; i < this.connections.length; i++) {
+          this.connections[i].id = i
+        }
         window.localStorage.setItem('connections', JSON.stringify(this.connections))
         this.$message({
           type: 'success',
@@ -819,6 +1106,13 @@ export default {
         menu.append(new MenuItem({ type: 'separator' }))
       }
       menu.append(new MenuItem({
+        label: '编辑连接',
+        click () {
+          _this.editConnection(index)
+        }
+      }))
+      menu.append(new MenuItem({ type: 'separator' }))
+      menu.append(new MenuItem({
         label: '删除连接',
         click () {
           _this.deleteConnection(index)
@@ -829,6 +1123,14 @@ export default {
       e.preventDefault()
       menu.popup({ window: remote.getCurrentWindow() })
     },
+    handleTreeCreated (ztreeObj) {
+      this.treeObject = ztreeObj
+      this.treeObject.setting.edit = true
+      this.treeObject.setting.showRemoveBtn = this.setRemoveBtn
+    },
+    setRemoveBtn (treeId, treeNode) {
+      return !treeNode.isParent
+    },
     /**
      * 展示某个db下的所有key
      * @param connectionIndex
@@ -837,33 +1139,171 @@ export default {
      */
     async showKeyList (connectionIndex, databaseIndex) {
       const redisClient = this.connections[connectionIndex].client
-      try {
-        // 选择当前选中的数据库
-        redisClient.select(databaseIndex)
-        this.keys = await redisClient.keys('*')
-        this.showKeys = this.keys
-      } catch (e) {
-        redisClient.disconnect(true)
+      const nodes = redisClient.nodes ? redisClient.nodes('master') : [redisClient]
+      const keyList = []
+      let endCount = 0
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i]
+        if (!this.connections[connectionIndex].cluster) {
+          node.select(databaseIndex)
+        }
+        const scanOption = {
+          match: '*',
+          count: 10000
+        }
+        const stream = node.scanBufferStream(scanOption)
+        stream.on('data', keys => {
+          for (let j = 0; j < keys.length; j++) {
+            this.keyBufferList.push(keys[j])
+            keyList.push(buffer2String(keys[j]))
+          }
+        })
+
+        stream.on('end', () => {
+          if (endCount + 1 === nodes.length) {
+            this.buildKeyTree(keyList)
+          }
+          endCount++
+        })
       }
       this.currentConnection = redisClient
       this.currentDatabase = databaseIndex
       this.redisInfoVisible = false
     },
+    keyTreeClick (evt, treeId, treeNode) {
+      if (!treeNode.children) {
+        this.getValue(treeNode.name, treeNode.buffer)
+      }
+    },
     searchKey (val) {
+      this.showKeys = []
+      const redisClient = this.currentConnection
+      const nodes = redisClient.nodes ? redisClient.nodes('master') : [redisClient]
+      const keyList = []
+      let endCount = 0
       if (val && val !== '') {
-        this.showKeys = []
-        for (let i = 0; this.keys.length; i++) {
-          if (this.keys[i].indexOf(val) >= 0) {
-            this.showKeys.push(this.keys[i])
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i]
+          const scanOption = {
+            match: '*' + val + '*',
+            count: 10000
           }
+          const stream = node.scanBufferStream(scanOption)
+          // this.scanStreams.push(stream)
+          stream.on('data', keys => {
+            for (let j = 0; j < keys.length; j++) {
+              this.keyBufferList.push(keys[j])
+              keyList.push(buffer2String(keys[j]))
+            }
+          })
+
+          stream.on('end', () => {
+            // all nodes scan finished
+            if (endCount + 1 === nodes.length) {
+              this.buildKeyTree(keyList)
+            }
+            endCount++
+          })
         }
       } else {
-        this.showKeys = this.keys
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i]
+          const scanOption = {
+            match: '*',
+            count: 10000
+          }
+          const stream = node.scanBufferStream(scanOption)
+          // this.scanStreams.push(stream)
+          stream.on('data', keys => {
+            for (let j = 0; j < keys.length; j++) {
+              this.keyBufferList.push(keys[j])
+              keyList.push(buffer2String(keys[j]))
+            }
+          })
+
+          stream.on('end', () => {
+            // all nodes scan finished
+            if (endCount + 1 === nodes.length) {
+              this.buildKeyTree(keyList)
+            }
+            endCount++
+          })
+        }
+      }
+    },
+    buildKeyTree (keys) {
+      this.keys = keys.sort()
+      this.keyTree = []
+      for (let i = 0; i < this.keys.length; i++) {
+        const keyArr = this.keys[i].split(':')
+        if (keyArr.length === 1) {
+          this.keyTree.push({
+            id: i + 1,
+            pid: 0,
+            name: this.keys[i],
+            buffer: this.keyBufferList[i]
+          })
+        } else {
+          for (let j = 0; j < keyArr.length; j++) {
+            const node = {
+              id: j === keyArr.length - 1 ? this.keys[i] : keyArr[j],
+              pid: j === 0 ? '0' : keyArr[j - 1],
+              name: j === keyArr.length - 1 ? this.keys[i] : keyArr[j],
+              buffer: j === keyArr.length - 1 ? this.keyBufferList[i] : null
+            }
+
+            let flag = false
+            this.keyTree.forEach(item => {
+              if (node.id === item.id) {
+                flag = true
+              }
+            })
+            if (!flag) {
+              this.keyTree.push(node)
+            }
+          }
+        }
       }
     },
     async updateKeys () {
       this.keys = await this.currentConnection.keys('*')
-      this.showKeys = this.keys
+      this.buildKeyTree(this.keys)
+      this.searchKey(this.keySearch)
+    },
+    deleteDbAllKeys () {
+      const checkKeyArr = this.treeObject.getCheckedNodes()
+      if (checkKeyArr && checkKeyArr.length > 0) {
+        this.$confirm('此操作将永久删除当前选中的 ' + checkKeyArr.length + ' 个Key, 是否继续?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'error'
+        }).then(() => {
+          for (let i = 0; i < checkKeyArr.length; i++) {
+            this.currentConnection.del(checkKeyArr[i].name)
+          }
+          this.refreshConnection(this.curr)
+          this.updateKeys()
+        }).catch(() => {
+        })
+      } else {
+        this.$confirm('此操作将永久删除该DB下所有Key, 是否继续?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'error'
+        }).then(() => {
+          this.currentConnection.call('FLUSHDB').then(res => {
+            this.refreshConnection(this.curr)
+            this.updateKeys()
+            this.$message({
+              type: 'success',
+              message: '删除成功!'
+            })
+          }).catch(err => {
+            console.log(err)
+          })
+        }).catch(() => {
+        })
+      }
     },
     async saveKey () {
       if (this.newKeyForm.keyType === 'string') {
@@ -891,7 +1331,7 @@ export default {
         keyType: '',
         value: ''
       }
-      // this.refreshConnection()
+      this.refreshConnection()
       this.updateKeys()
     },
     openUpdateKeyDialog () {
@@ -920,7 +1360,7 @@ export default {
         }
         this.$message({
           type: 'success',
-          message: '更新成功!'
+          message: '新增成功!'
         })
         this.updateKeyAndTTLFormVisible = false
         this.updateKeys()
@@ -1035,29 +1475,69 @@ export default {
     },
     updateValue () {
       this.currentConnection.set(this.currentKey, this.currentValue)
+      this.getValue(this.currentKey)
       this.$message({
         message: '更新成功',
         type: 'success'
       })
     },
-    async getValue (key) {
+    async getValue (key, keyBuffer) {
       try {
         this.currentConnection.defineCommand('lremindex', {
           numberOfKeys: 1,
           lua: 'local FLAG = "$$#__@DELETE@_REDIS_@PRO@__#$$" redis.call("lset", KEYS[1], ARGV[1], FLAG) redis.call("lrem", KEYS[1], 1, FLAG)'
         })
+
+        this.currentConnection.defineCommand('getType', {
+          numberOfKeys: 1,
+          lua: 'return redis.call("get", KEYS[1])'
+        })
+
         this.currentKey = key
+        this.currentKeyBuffer = keyBuffer
         this.currentKeyType = await this.currentConnection.type(key)
+        if (this.currentKeyType === 'none') {
+          key = this.convertKey(key)
+          this.currentKeyType = await this.currentConnection.type(key)
+        }
+
         if (this.currentKeyType === 'none') {
           this.$message.error('该key值不存在')
           this.currentKey = ''
-          this.updateKeys()
+          // this.updateKeys()
+          return
         }
+
         this.getValueByType(key, this.currentKeyType)
         this.currentKeyTtl = await this.currentConnection.pttl(key)
       } catch (e) {
         this.$message.error('连接已断开，请重新连接')
       }
+    },
+    convertKey (key) {
+      const buffer = Buffer.from(key)
+      let bufferStr = ','
+      for (const value of buffer.values()) {
+        bufferStr += value + ','
+      }
+      bufferStr = bufferStr.replace(/,92,120,65,67,/g, ',-84,')
+      bufferStr = bufferStr.replace(/,92,120,69,68,/g, ',-19,')
+      bufferStr = bufferStr.replace(/,92,120,48,48,/g, ',0,')
+      bufferStr = bufferStr.replace(/,92,120,48,49,/g, ',1,')
+      bufferStr = bufferStr.replace(/,92,120,48,50,/g, ',2,')
+      bufferStr = bufferStr.replace(/,92,120,48,51,/g, ',3,')
+      bufferStr = bufferStr.replace(/,92,120,48,52,/g, ',4,')
+      bufferStr = bufferStr.replace(/,92,120,48,53,/g, ',5,')
+      bufferStr = bufferStr.replace(/,92,120,48,66,/g, ',11,')
+      bufferStr = bufferStr.replace(/,92,120,49,50,/g, ',18,')
+      bufferStr = bufferStr.replace(/,92,120,49,53,/g, ',21,')
+      bufferStr = bufferStr.replace(/,92,120,65,66,/g, ',-85,')
+      bufferStr = bufferStr.replace(/,92,120,65,52,/g, ',-92,')
+      bufferStr = bufferStr.replace(/,92,120,68,55,/g, ',-41,')
+      bufferStr = bufferStr.replace(/,92,120,67,48,/g, ',-64,')
+      bufferStr = bufferStr.replace(/,92,120,48,48,/g, ',0,')
+      bufferStr = bufferStr.substr(1, bufferStr.length - 2)
+      return Buffer.from(bufferStr.split(','))
     },
     openHashValueDialog () {
       this.hashValueForm.key = ''
@@ -1149,7 +1629,6 @@ export default {
         cancelButtonText: '取消',
         type: 'error'
       }).then(() => {
-        console.log(index)
         this.currentConnection.lremindex(this.currentKey, index)
         this.$message({
           type: 'success',
@@ -1175,7 +1654,6 @@ export default {
       })
     },
     deleteZSetValue (value) {
-      console.log(value)
       this.$confirm('此操作将永久删除该行数据, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -1196,6 +1674,12 @@ export default {
         case 'string':
           this.currentConnection.get(key).then(function (result) {
             _this.currentValue = result
+            if (isJSON(result.toString())) {
+              _this.currentValue = JSON.stringify(JSON.parse(result), null, 2)
+              _this.stringValueType = 'json'
+            } else {
+              _this.stringValueType = 'text'
+            }
           })
           break
         case 'hash':
@@ -1335,7 +1819,7 @@ export default {
           }
         }
         .connections {
-          height: calc(100% - 110px);
+          height: calc(100% - 95px);
           overflow-y: auto;
           .connection-item {
             display: flex;
@@ -1352,6 +1836,10 @@ export default {
               height: 25px;
               line-height: 25px;
               font-weight: 500;
+              width: calc(100% - 125px);
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
               -webkit-user-select: none;
             }
           }
@@ -1418,7 +1906,7 @@ export default {
           }
         }
         .content {
-          height: calc(100% - 110px);
+          height: calc(100% - 95px);
           overflow-y: auto;
           .item {
             display: flex;
@@ -1511,6 +1999,7 @@ export default {
   }
   .el-form-item {
     display: flex;
+    margin-bottom: 20px !important;
   }
   .el-form-item__label {
     flex: 0 0 20.83333333%;

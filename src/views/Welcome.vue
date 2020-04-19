@@ -1,6 +1,6 @@
 <template>
   <div class="main">
-    <img src="../assets/welcome.png">
+    <img draggable="false" src="../assets/welcome.png">
   </div>
 </template>
 <script>
@@ -25,5 +25,6 @@ export default {
   margin: 0;
   padding: 0;
   overflow-y: hidden;
+  border-radius: 4px;
 }
 </style>
