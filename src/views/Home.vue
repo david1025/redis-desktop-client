@@ -512,7 +512,7 @@ export default {
       keySearch: '',
       keys: [],
       showKeys: [],
-      keyBufferList: [],
+      keyBufferMap: {},
       keyTree: [],
       keyAllTree: [],
       treeObject: {},
@@ -1154,7 +1154,7 @@ export default {
         const stream = node.scanBufferStream(scanOption)
         stream.on('data', keys => {
           for (let j = 0; j < keys.length; j++) {
-            this.keyBufferList.push(keys[j])
+            this.keyBufferMap[buffer2String(keys[j])] = keys[j]
             keyList.push(buffer2String(keys[j]))
           }
         })
@@ -1192,7 +1192,7 @@ export default {
           // this.scanStreams.push(stream)
           stream.on('data', keys => {
             for (let j = 0; j < keys.length; j++) {
-              this.keyBufferList.push(keys[j])
+              this.keyBufferMap[buffer2String(keys[j])] = keys[j]
               keyList.push(buffer2String(keys[j]))
             }
           })
@@ -1216,7 +1216,7 @@ export default {
           // this.scanStreams.push(stream)
           stream.on('data', keys => {
             for (let j = 0; j < keys.length; j++) {
-              this.keyBufferList.push(keys[j])
+              this.keyBufferMap[buffer2String(keys[j])] = keys[j]
               keyList.push(buffer2String(keys[j]))
             }
           })
@@ -1240,16 +1240,14 @@ export default {
           this.keyTree.push({
             id: i + 1,
             pid: 0,
-            name: this.keys[i],
-            buffer: this.keyBufferList[i]
+            name: this.keys[i]
           })
         } else {
           for (let j = 0; j < keyArr.length; j++) {
             const node = {
               id: j === keyArr.length - 1 ? this.keys[i] : keyArr[j],
               pid: j === 0 ? '0' : keyArr[j - 1],
-              name: j === keyArr.length - 1 ? this.keys[i] : keyArr[j],
-              buffer: j === keyArr.length - 1 ? this.keyBufferList[i] : null
+              name: j === keyArr.length - 1 ? this.keys[i] : keyArr[j]
             }
 
             let flag = false
@@ -1351,7 +1349,7 @@ export default {
       if (this.updateKeyAndTTLForm.key === this.currentKey) {
         if (parseInt(this.updateKeyAndTTLForm.ttl) !== this.currentKeyTtl) {
           if (parseInt(this.updateKeyAndTTLForm.ttl) >= 0) {
-            this.currentConnection.pexpire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
+            this.currentConnection.expire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
             this.currentKeyTtl = this.updateKeyAndTTLForm.ttl
           } else {
             this.currentConnection.persist(this.currentKey)
@@ -1381,7 +1379,7 @@ export default {
                 }
                 if (parseInt(this.updateKeyAndTTLForm.ttl) !== this.currentKeyTtl) {
                   if (parseInt(this.updateKeyAndTTLForm.ttl) >= 0) {
-                    this.currentConnection.pexpire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
+                    this.currentConnection.expire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
                     this.currentKeyTtl = this.updateKeyAndTTLForm.ttl
                   } else {
                     this.currentConnection.persist(this.currentKey)
@@ -1410,7 +1408,7 @@ export default {
             }
             if (parseInt(this.updateKeyAndTTLForm.ttl) !== this.currentKeyTtl) {
               if (parseInt(this.updateKeyAndTTLForm.ttl) >= 0) {
-                this.currentConnection.pexpire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
+                this.currentConnection.expire(this.updateKeyAndTTLForm.key, this.updateKeyAndTTLForm.ttl)
                 this.currentKeyTtl = this.updateKeyAndTTLForm.ttl
               } else {
                 this.currentConnection.persist(this.currentKey)
@@ -1492,52 +1490,22 @@ export default {
           numberOfKeys: 1,
           lua: 'return redis.call("get", KEYS[1])'
         })
-
         this.currentKey = key
         this.currentKeyBuffer = keyBuffer
+        key = this.keyBufferMap[key]
         this.currentKeyType = await this.currentConnection.type(key)
-        if (this.currentKeyType === 'none') {
-          key = this.convertKey(key)
-          this.currentKeyType = await this.currentConnection.type(key)
-        }
-
         if (this.currentKeyType === 'none') {
           this.$message.error('该key值不存在')
           this.currentKey = ''
           // this.updateKeys()
           return
         }
-
         this.getValueByType(key, this.currentKeyType)
-        this.currentKeyTtl = await this.currentConnection.pttl(key)
+        this.currentKeyTtl = await this.currentConnection.ttl(key)
       } catch (e) {
+        console.log(e)
         this.$message.error('连接已断开，请重新连接')
       }
-    },
-    convertKey (key) {
-      const buffer = Buffer.from(key)
-      let bufferStr = ','
-      for (const value of buffer.values()) {
-        bufferStr += value + ','
-      }
-      bufferStr = bufferStr.replace(/,92,120,65,67,/g, ',-84,')
-      bufferStr = bufferStr.replace(/,92,120,69,68,/g, ',-19,')
-      bufferStr = bufferStr.replace(/,92,120,48,48,/g, ',0,')
-      bufferStr = bufferStr.replace(/,92,120,48,49,/g, ',1,')
-      bufferStr = bufferStr.replace(/,92,120,48,50,/g, ',2,')
-      bufferStr = bufferStr.replace(/,92,120,48,51,/g, ',3,')
-      bufferStr = bufferStr.replace(/,92,120,48,52,/g, ',4,')
-      bufferStr = bufferStr.replace(/,92,120,48,53,/g, ',5,')
-      bufferStr = bufferStr.replace(/,92,120,48,66,/g, ',11,')
-      bufferStr = bufferStr.replace(/,92,120,49,50,/g, ',18,')
-      bufferStr = bufferStr.replace(/,92,120,49,53,/g, ',21,')
-      bufferStr = bufferStr.replace(/,92,120,65,66,/g, ',-85,')
-      bufferStr = bufferStr.replace(/,92,120,65,52,/g, ',-92,')
-      bufferStr = bufferStr.replace(/,92,120,68,55,/g, ',-41,')
-      bufferStr = bufferStr.replace(/,92,120,67,48,/g, ',-64,')
-      bufferStr = bufferStr.replace(/,92,120,48,48,/g, ',0,')
-      bufferStr = bufferStr.substr(1, bufferStr.length - 2)
-      return Buffer.from(bufferStr.split(','))
     },
     openHashValueDialog () {
       this.hashValueForm.key = ''
@@ -1672,8 +1640,8 @@ export default {
       const _this = this
       switch (type) {
         case 'string':
-          this.currentConnection.get(key).then(function (result) {
-            _this.currentValue = result
+          this.currentConnection.getBuffer(key).then(function (result) {
+            _this.currentValue = buffer2String(result)
             if (isJSON(result.toString())) {
               _this.currentValue = JSON.stringify(JSON.parse(result), null, 2)
               _this.stringValueType = 'json'
